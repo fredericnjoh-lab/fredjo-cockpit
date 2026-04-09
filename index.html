@@ -1,0 +1,2061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FredJo OS — Performance Cockpit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --black:#080808;--off-black:#0f0f0f;--panel:#141414;--panel-2:#1a1a1a;
+  --border:#242424;--border-2:#2e2e2e;--mid:#444;--muted:#666;
+  --silver:#999;--light:#ccc;--white:#f4f3ef;
+  --gold:#b8975a;--gold-2:#d4b67a;--gold-dim:rgba(184,151,90,0.12);--gold-glow:rgba(184,151,90,0.05);
+  --red:#e05252;--red-dim:rgba(224,82,82,0.12);
+  --green:#52c97a;--green-dim:rgba(82,201,122,0.1);
+  --amber:#e09a3a;--amber-dim:rgba(224,154,58,0.12);
+  --blue:#4a9eff;--blue-dim:rgba(74,158,255,0.1);
+  --teal:#3ecfb2;--teal-dim:rgba(62,207,178,0.1);
+  --r:6px;--r2:10px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--black);color:var(--white);font-family:'Syne',sans-serif;font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh;}
+.app{display:flex;min-height:100vh;}
+.sidebar{width:224px;flex-shrink:0;background:var(--off-black);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;}
+.main{flex:1;overflow-x:hidden;}
+
+/* sidebar */
+.sidebar-logo{padding:22px 20px 18px;border-bottom:1px solid var(--border);}
+.logo-brand{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:0.12em;color:var(--white);line-height:1;}
+.logo-brand span{color:var(--gold);}
+.logo-sub{font-size:9px;letter-spacing:.4em;color:var(--muted);text-transform:uppercase;margin-top:4px;}
+.logo-pill{display:inline-block;background:var(--gold-dim);color:var(--gold);font-size:8px;padding:2px 6px;border-radius:3px;letter-spacing:.1em;text-transform:uppercase;margin-top:6px;}
+.nav{padding:14px 0;flex:1;}
+.nav-section{font-size:8px;letter-spacing:.5em;color:var(--muted);text-transform:uppercase;padding:12px 20px 5px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;cursor:pointer;transition:background .15s,color .15s;border-left:2px solid transparent;font-size:12px;color:var(--silver);font-weight:500;}
+.nav-item:hover{background:var(--panel);color:var(--white);}
+.nav-item.active{background:var(--panel);color:var(--gold);border-left-color:var(--gold);}
+.nav-icon{font-size:14px;width:18px;text-align:center;flex-shrink:0;}
+.nav-badge{margin-left:auto;background:var(--red-dim);color:var(--red);font-size:9px;padding:1px 5px;border-radius:10px;font-family:'DM Mono',monospace;}
+.sidebar-footer{padding:14px 20px;border-top:1px solid var(--border);}
+.user-card{display:flex;align-items:center;gap:10px;}
+.user-avatar{width:30px;height:30px;border-radius:50%;background:var(--gold-dim);border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--gold);font-weight:600;flex-shrink:0;}
+.user-name{font-size:12px;font-weight:600;color:var(--white);}
+.user-role{font-size:10px;color:var(--muted);}
+
+/* page */
+.page{display:none;}
+.page.active{display:block;}
+.page-header{padding:26px 32px 18px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:16px;}
+.page-title{font-family:'Bebas Neue',sans-serif;font-size:34px;letter-spacing:.06em;color:var(--white);line-height:1;}
+.page-title span{color:var(--gold);}
+.page-subtitle{font-size:11px;color:var(--muted);margin-top:4px;}
+.header-actions{display:flex;gap:8px;align-items:center;flex-shrink:0;margin-top:4px;}
+.page-body{padding:22px 32px;}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--r);font-size:11px;font-weight:600;cursor:pointer;border:none;font-family:'Syne',sans-serif;transition:all .15s;letter-spacing:.03em;}
+.btn-gold{background:var(--gold);color:var(--black);}
+.btn-gold:hover{background:var(--gold-2);}
+.btn-ghost{background:transparent;color:var(--silver);border:1px solid var(--border-2);}
+.btn-ghost:hover{background:var(--panel);color:var(--white);}
+
+/* kpi strip */
+.kpi-strip{display:grid;gap:10px;margin-bottom:22px;}
+.kpi-5{grid-template-columns:repeat(5,1fr);}
+.kpi-4{grid-template-columns:repeat(4,1fr);}
+.kpi-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--r2);padding:16px 18px;position:relative;overflow:hidden;transition:border-color .2s;}
+.kpi-card:hover{border-color:var(--border-2);}
+.kpi-label{font-size:9px;letter-spacing:.4em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.kpi-value{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:.04em;line-height:1;color:var(--white);}
+.kpi-value.gold{color:var(--gold);}
+.kpi-value.red{color:var(--red);}
+.kpi-value.green{color:var(--green);}
+.kpi-value.amber{color:var(--amber);}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:4px;font-family:'DM Mono',monospace;}
+.kpi-delta{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:2px 6px;border-radius:3px;margin-top:6px;font-family:'DM Mono',monospace;}
+.delta-up{background:var(--green-dim);color:var(--green);}
+.delta-down{background:var(--red-dim);color:var(--red);}
+.delta-flat{background:var(--amber-dim);color:var(--amber);}
+.delta-info{background:var(--blue-dim);color:var(--blue);}
+
+/* panels */
+.section-row{display:grid;gap:16px;margin-bottom:20px;}
+.cols-2{grid-template-columns:1fr 1fr;}
+.cols-3{grid-template-columns:1fr 1fr 1fr;}
+.cols-32{grid-template-columns:3fr 2fr;}
+.cols-23{grid-template-columns:2fr 3fr;}
+.panel-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;}
+.panel-head{padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.panel-title{font-size:10px;letter-spacing:.4em;text-transform:uppercase;color:var(--gold);font-weight:600;}
+.panel-action{font-size:10px;color:var(--muted);cursor:pointer;padding:3px 8px;border:1px solid var(--border-2);border-radius:3px;transition:all .15s;}
+.panel-action:hover{color:var(--white);border-color:var(--mid);}
+.panel-body{padding:16px 18px;}
+
+/* badges */
+.badge{display:inline-block;font-size:9px;padding:2px 6px;border-radius:3px;font-weight:600;letter-spacing:.05em;}
+.b-gold{background:var(--gold-dim);color:var(--gold);}
+.b-blue{background:var(--blue-dim);color:var(--blue);}
+.b-teal{background:var(--teal-dim);color:var(--teal);}
+.b-green{background:var(--green-dim);color:var(--green);}
+.b-red{background:var(--red-dim);color:var(--red);}
+.b-amber{background:var(--amber-dim);color:var(--amber);}
+.b-mid{background:rgba(100,100,100,.15);color:var(--silver);}
+
+/* alerts */
+.alert-card{display:flex;gap:12px;padding:12px 14px;border-radius:var(--r);margin-bottom:8px;border:1px solid;}
+.alert-card.danger{background:rgba(224,82,82,.08);border-color:rgba(224,82,82,.2);}
+.alert-card.warn{background:rgba(224,154,58,.08);border-color:rgba(224,154,58,.2);}
+.alert-card.info{background:rgba(74,158,255,.08);border-color:rgba(74,158,255,.2);}
+.alert-card.success{background:rgba(82,201,122,.08);border-color:rgba(82,201,122,.2);}
+.alert-icon{font-size:15px;flex-shrink:0;margin-top:1px;}
+.alert-title{font-size:11px;font-weight:700;margin-bottom:3px;}
+.alert-text{font-size:11px;color:var(--silver);line-height:1.6;}
+.alert-card.danger .alert-title{color:var(--red);}
+.alert-card.warn .alert-title{color:var(--amber);}
+.alert-card.info .alert-title{color:var(--blue);}
+.alert-card.success .alert-title{color:var(--green);}
+
+/* tables */
+.data-table{width:100%;border-collapse:collapse;}
+.data-table th{text-align:left;font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--border);font-weight:500;}
+.data-table td{padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px;color:var(--light);vertical-align:middle;}
+.data-table tr:last-child td{border-bottom:none;}
+.data-table tr:hover td{background:rgba(255,255,255,.02);}
+.td-title{font-weight:600;color:var(--white);}
+.mono{font-family:'DM Mono',monospace;font-size:11px;}
+
+/* progress */
+.progress-row{margin-bottom:8px;}
+.progress-label{display:flex;justify-content:space-between;font-size:10px;color:var(--silver);margin-bottom:4px;}
+.progress-label span:last-child{font-family:'DM Mono',monospace;}
+.progress-track{height:4px;background:var(--panel-2);border-radius:2px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:2px;transition:width .6s ease;}
+.fill-gold{background:var(--gold);}
+.fill-green{background:var(--green);}
+.fill-red{background:var(--red);}
+.fill-blue{background:var(--blue);}
+.fill-amber{background:var(--amber);}
+.fill-teal{background:var(--teal);}
+
+/* freelancer cards */
+.fl-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.fl-card{background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r2);padding:18px;cursor:pointer;transition:border-color .2s,transform .15s;}
+.fl-card:hover{border-color:var(--gold);transform:translateY(-1px);}
+.fl-top{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+.fl-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0;border:2px solid;}
+.fl-avatar.fahim{background:rgba(74,158,255,.15);color:var(--blue);border-color:rgba(74,158,255,.3);}
+.fl-avatar.naeem{background:rgba(62,207,178,.15);color:var(--teal);border-color:rgba(62,207,178,.3);}
+.fl-name{font-size:15px;font-weight:700;color:var(--white);}
+.score-row{display:flex;gap:8px;margin-bottom:12px;}
+.score-pill{flex:1;text-align:center;background:var(--panel);border:1px solid var(--border);border-radius:var(--r);padding:8px 6px;}
+.score-val{font-family:'Bebas Neue',sans-serif;font-size:22px;line-height:1;}
+.score-lbl{font-size:8px;color:var(--muted);letter-spacing:.2em;text-transform:uppercase;margin-top:2px;}
+.s-gold{color:var(--gold);}
+.s-green{color:var(--green);}
+.s-red{color:var(--red);}
+.s-amber{color:var(--amber);}
+.s-blue{color:var(--blue);}
+
+/* platform pills */
+.pp{font-size:9px;padding:2px 6px;border-radius:3px;font-weight:600;letter-spacing:.05em;}
+.pp-fb{background:#1a1f2e;color:#93bbf7;}
+.pp-ig{background:#2a1a2e;color:#c084fc;}
+.pp-tt{background:#1a2a2a;color:#5eead4;}
+.pp-yt{background:#2a1a1a;color:#f87171;}
+
+/* kanban */
+.kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.kanban-col{background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;}
+.kanban-head{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.kanban-title{font-size:10px;letter-spacing:.3em;text-transform:uppercase;font-weight:600;}
+.kanban-count{font-size:10px;color:var(--muted);background:var(--panel);padding:1px 6px;border-radius:10px;font-family:'DM Mono',monospace;}
+.kanban-items{padding:10px;display:flex;flex-direction:column;gap:6px;min-height:180px;}
+.kanban-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;cursor:default;}
+.kanban-card:hover{border-color:var(--border-2);}
+.kc-title{font-size:11px;font-weight:600;color:var(--white);margin-bottom:6px;}
+.kc-meta{display:flex;align-items:center;justify-content:space-between;}
+.kc-date{font-size:9px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:6px;}
+
+/* scorecard */
+.sc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.sc-item{background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r);padding:12px;text-align:center;}
+.sc-label{font-size:8px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+.sc-value{font-family:'Bebas Neue',sans-serif;font-size:22px;line-height:1;}
+.sc-target{font-size:9px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace;}
+
+/* tabs */
+.tabs{display:flex;gap:2px;padding:4px;background:var(--panel-2);border-radius:var(--r);width:fit-content;margin-bottom:18px;}
+.tab{padding:7px 16px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;color:var(--muted);}
+.tab.active{background:var(--panel);color:var(--white);box-shadow:0 1px 3px rgba(0,0,0,.3);}
+.tab:hover:not(.active){color:var(--silver);}
+
+/* insights */
+.insight-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--r2);padding:18px;margin-bottom:12px;position:relative;overflow:hidden;}
+.insight-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
+.insight-card.ig-gold::before{background:var(--gold);}
+.insight-card.ig-red::before{background:var(--red);}
+.insight-card.ig-green::before{background:var(--green);}
+.insight-card.ig-blue::before{background:var(--blue);}
+.insight-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.insight-tag{font-size:8px;padding:2px 7px;border-radius:3px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;}
+.insight-title{font-size:13px;font-weight:700;color:var(--white);}
+.insight-body{font-size:11px;color:var(--silver);line-height:1.7;}
+.insight-actions{display:flex;gap:6px;margin-top:12px;}
+
+/* revenue chart */
+.rev-bars{display:flex;align-items:flex-end;gap:3px;}
+.rev-bar{flex:1;border-radius:2px 2px 0 0;min-height:2px;position:relative;cursor:default;}
+.rev-bar:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--panel-2);border:1px solid var(--border-2);color:var(--white);font-size:10px;padding:4px 8px;border-radius:4px;white-space:nowrap;z-index:10;font-family:'DM Mono',monospace;}
+
+/* deliverables */
+.del-item{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:6px;}
+.del-icon{width:32px;height:32px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.del-info{flex:1;}
+.del-name{font-size:12px;font-weight:600;color:var(--white);}
+.del-meta{font-size:10px;color:var(--muted);margin-top:2px;}
+.del-actions{display:flex;gap:6px;}
+
+/* report */
+.report-week{background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:10px;}
+.report-head{padding:13px 18px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;cursor:pointer;}
+.report-title{font-size:13px;font-weight:700;color:var(--white);}
+.report-body{padding:16px 18px;display:none;}
+.report-body.open{display:block;}
+.rm-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);}
+.rm-row:last-child{border-bottom:none;}
+.rm-name{font-size:11px;color:var(--silver);}
+.rm-vals{display:flex;gap:12px;align-items:center;}
+.rm-val{font-family:'DM Mono',monospace;font-size:11px;}
+.rm-val.target{color:var(--muted);}
+.rm-val.actual{color:var(--white);font-weight:600;}
+
+/* modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);display:none;align-items:center;justify-content:center;z-index:1000;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--panel);border:1px solid var(--border-2);border-radius:var(--r2);padding:26px;width:560px;max-width:90vw;max-height:90vh;overflow-y:auto;}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.06em;color:var(--white);margin-bottom:4px;}
+.modal-sub{font-size:11px;color:var(--muted);margin-bottom:18px;}
+.form-group{margin-bottom:13px;}
+.form-label{font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px;}
+.form-input,.form-select,.form-textarea{width:100%;background:var(--panel-2);border:1px solid var(--border-2);border-radius:var(--r);padding:9px 12px;font-size:12px;color:var(--white);font-family:'Syne',sans-serif;outline:none;transition:border-color .15s;}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--gold);}
+.form-select option{background:var(--panel-2);}
+.form-textarea{min-height:80px;resize:vertical;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--border);}
+
+/* divider */
+.divider-label{display:flex;align-items:center;gap:12px;margin:18px 0;}
+.divider-label span{font-size:9px;letter-spacing:.4em;text-transform:uppercase;color:var(--muted);}
+.divider-label::before,.divider-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* status dot */
+.sdot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:6px;}
+
+/* period btns */
+.period-selector{display:flex;gap:5px;}
+.period-btn{padding:5px 10px;border-radius:4px;font-size:10px;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);border:1px solid var(--border);font-family:'Syne',sans-serif;transition:all .15s;}
+.period-btn.active,.period-btn:hover{background:var(--panel);color:var(--white);border-color:var(--border-2);}
+
+/* audience geo bar */
+.geo-bar{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);}
+.geo-bar:last-child{border-bottom:none;}
+.geo-lbl{font-size:11px;color:var(--silver);width:130px;flex-shrink:0;}
+.geo-track{flex:1;height:5px;background:var(--panel-2);border-radius:3px;overflow:hidden;}
+.geo-fill{height:100%;border-radius:3px;}
+.geo-val{font-size:11px;color:var(--light);width:36px;text-align:right;font-family:'DM Mono',monospace;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.page.active>*{animation:fadeUp .25s ease both;}
+.page.active>*:nth-child(1){animation-delay:.02s;}
+.page.active>*:nth-child(2){animation-delay:.06s;}
+.page.active>*:nth-child(3){animation-delay:.10s;}
+.page.active>*:nth-child(4){animation-delay:.14s;}
+.page.active>*:nth-child(5){animation-delay:.18s;}
+
+@media(max-width:1100px){.kpi-5{grid-template-columns:repeat(3,1fr);}.cols-32,.cols-23{grid-template-columns:1fr;}.kanban{grid-template-columns:1fr 1fr;}}
+
+/* ── MOBILE TOPBAR ── */
+.mobile-topbar{display:none;position:fixed;top:0;left:0;right:0;z-index:200;height:54px;background:var(--off-black);border-bottom:1px solid var(--border);align-items:center;justify-content:space-between;padding:0 16px;}
+.mobile-brand{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.1em;color:var(--white);}
+.mobile-brand span{color:var(--gold);}
+.hamburger{display:flex;flex-direction:column;justify-content:center;gap:5px;width:36px;height:36px;cursor:pointer;padding:6px;border-radius:var(--r);border:1px solid var(--border-2);background:transparent;flex-shrink:0;}
+.hamburger span{display:block;height:2px;background:var(--white);border-radius:2px;transition:all .25s;}
+.hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg);}
+.hamburger.open span:nth-child(2){opacity:0;transform:scaleX(0);}
+.hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+.mobile-page-label{font-size:11px;font-weight:600;color:var(--silver);letter-spacing:.05em;}
+
+/* ── MOBILE DRAWER ── */
+.drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;opacity:0;pointer-events:none;transition:opacity .25s;}
+.drawer-overlay.open{opacity:1;pointer-events:all;}
+.drawer{position:fixed;top:0;left:0;bottom:0;width:280px;background:var(--off-black);border-right:1px solid var(--border);z-index:400;transform:translateX(-100%);transition:transform .28s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow-y:auto;}
+.drawer.open{transform:translateX(0);}
+.drawer-header{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.drawer-brand{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.1em;color:var(--white);}
+.drawer-brand span{color:var(--gold);}
+.drawer-close{width:32px;height:32px;border-radius:var(--r);border:1px solid var(--border-2);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--silver);font-size:16px;}
+.drawer-nav{padding:12px 0;flex:1;}
+.drawer-section{font-size:8px;letter-spacing:.5em;color:var(--muted);text-transform:uppercase;padding:10px 20px 4px;}
+.drawer-item{display:flex;align-items:center;gap:10px;padding:11px 20px;cursor:pointer;border-left:2px solid transparent;font-size:13px;color:var(--silver);font-weight:500;transition:background .15s,color .15s;}
+.drawer-item:hover{background:var(--panel);color:var(--white);}
+.drawer-item.active{background:var(--panel);color:var(--gold);border-left-color:var(--gold);}
+.drawer-icon{font-size:15px;width:20px;text-align:center;flex-shrink:0;}
+.drawer-badge{margin-left:auto;background:var(--red-dim);color:var(--red);font-size:9px;padding:1px 5px;border-radius:10px;font-family:'DM Mono',monospace;}
+.drawer-footer{padding:14px 20px;border-top:1px solid var(--border);}
+.drawer-user{display:flex;align-items:center;gap:10px;}
+
+/* ── MOBILE BOTTOM NAV (quick shortcuts) ── */
+.mobile-bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;height:58px;background:var(--off-black);border-top:1px solid var(--border);align-items:center;justify-content:space-around;padding:0 4px;}
+.mbn-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 10px;cursor:pointer;border-radius:var(--r);transition:background .15s;flex:1;}
+.mbn-item:hover,.mbn-item.active{background:var(--panel);}
+.mbn-icon{font-size:16px;color:var(--muted);}
+.mbn-item.active .mbn-icon{color:var(--gold);}
+.mbn-label{font-size:8px;color:var(--muted);letter-spacing:.03em;font-weight:500;}
+.mbn-item.active .mbn-label{color:var(--gold);}
+
+@media(max-width:800px){
+  .sidebar{display:none;}
+  .mobile-topbar{display:flex;}
+  .mobile-bottom-nav{display:flex;}
+  .main{padding-top:54px;padding-bottom:58px;}
+  .kpi-5,.kpi-4{grid-template-columns:repeat(2,1fr);}
+  .fl-grid{grid-template-columns:1fr;}
+  .section-row.cols-2,.section-row.cols-3{grid-template-columns:1fr;}
+  .sc-grid{grid-template-columns:1fr 1fr;}
+  .page-header{padding:16px 16px 12px;flex-wrap:wrap;gap:10px;}
+  .page-body{padding:14px 16px;}
+  .page-title{font-size:26px;}
+  .header-actions{width:100%;}
+  .form-row{grid-template-columns:1fr;}
+  .kanban{grid-template-columns:1fr;}
+  .report-body>div{grid-template-columns:1fr!important;}
+}
+@media(max-width:400px){
+  .kpi-5,.kpi-4{grid-template-columns:1fr 1fr;}
+  .kpi-value{font-size:24px;}
+}
+</style>
+</head>
+<body>
+<!-- ════ MOBILE TOPBAR ════ -->
+<div class="mobile-topbar">
+  <button class="hamburger" id="hamburger" onclick="toggleDrawer()" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+  <div class="mobile-brand">Fredjo<span>OS</span></div>
+  <div id="mobile-page-label" class="mobile-page-label">Dashboard</div>
+</div>
+
+<!-- ════ DRAWER ════ -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div class="drawer-brand">Fredjo<span>OS</span></div>
+    <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <nav class="drawer-nav">
+    <div class="drawer-section">Overview</div>
+    <div class="drawer-item active" id="di-dashboard" onclick="navMobile('dashboard','Dashboard')"><span class="drawer-icon">◉</span>Dashboard</div>
+    <div class="drawer-item" id="di-insights" onclick="navMobile('insights','Insights')"><span class="drawer-icon">⚡</span>Insights<span class="drawer-badge">4</span></div>
+    <div class="drawer-section">Team</div>
+    <div class="drawer-item" id="di-freelancers" onclick="navMobile('freelancers','Freelancers')"><span class="drawer-icon">◈</span>Freelancers</div>
+    <div class="drawer-item" id="di-tasks" onclick="navMobile('tasks','Tasks')"><span class="drawer-icon">◻</span>Tasks<span class="drawer-badge">2</span></div>
+    <div class="drawer-item" id="di-deliverables" onclick="navMobile('deliverables','Deliverables')"><span class="drawer-icon">◤</span>Deliverables</div>
+    <div class="drawer-section">Performance</div>
+    <div class="drawer-item" id="di-kpis" onclick="navMobile('kpis','KPI Tracker')"><span class="drawer-icon">▲</span>KPI Tracker</div>
+    <div class="drawer-item" id="di-revenue" onclick="navMobile('revenue','Revenue')"><span class="drawer-icon">◆</span>Revenue</div>
+    <div class="drawer-item" id="di-audience" onclick="navMobile('audience','Audience')"><span class="drawer-icon">●</span>Audience</div>
+    <div class="drawer-item" id="di-reporting" onclick="navMobile('reporting','Reports')"><span class="drawer-icon">▣</span>Reports</div>
+  </nav>
+  <div class="drawer-footer">
+    <div class="drawer-user">
+      <div class="user-avatar">FJ</div>
+      <div><div class="user-name">FredJo</div><div class="user-role">Director · All access</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ MOBILE BOTTOM NAV ════ -->
+<div class="mobile-bottom-nav">
+  <div class="mbn-item active" id="mbn-dashboard" onclick="navMobile('dashboard','Dashboard')">
+    <span class="mbn-icon">◉</span><span class="mbn-label">Dashboard</span>
+  </div>
+  <div class="mbn-item" id="mbn-insights" onclick="navMobile('insights','Insights')">
+    <span class="mbn-icon">⚡</span><span class="mbn-label">Insights</span>
+  </div>
+  <div class="mbn-item" id="mbn-revenue" onclick="navMobile('revenue','Revenue')">
+    <span class="mbn-icon">◆</span><span class="mbn-label">Revenue</span>
+  </div>
+  <div class="mbn-item" id="mbn-kpis" onclick="navMobile('kpis','KPIs')">
+    <span class="mbn-icon">▲</span><span class="mbn-label">KPIs</span>
+  </div>
+  <div class="mbn-item" id="mbn-more" onclick="toggleDrawer()">
+    <span class="mbn-icon">&#8801;</span><span class="mbn-label">More</span>
+  </div>
+</div>
+
+<div class="app">
+
+<!-- ════ SIDEBAR ════ -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-brand">Fredjo<span>OS</span></div>
+    <div class="logo-sub">Performance Cockpit</div>
+    <div class="logo-pill">Feb–Mar 2026 · Live Data</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-section">Overview</div>
+    <div class="nav-item active" onclick="nav('dashboard',this)"><span class="nav-icon">◉</span>Dashboard</div>
+    <div class="nav-item" onclick="nav('insights',this)"><span class="nav-icon">⚡</span>Insights<span class="nav-badge">4</span></div>
+    <div class="nav-section">Team</div>
+    <div class="nav-item" onclick="nav('freelancers',this)"><span class="nav-icon">◈</span>Freelancers</div>
+    <div class="nav-item" onclick="nav('tasks',this)"><span class="nav-icon">◻</span>Tasks<span class="nav-badge">2</span></div>
+    <div class="nav-item" onclick="nav('deliverables',this)"><span class="nav-icon">◤</span>Deliverables</div>
+    <div class="nav-section">Performance</div>
+    <div class="nav-item" onclick="nav('kpis',this)"><span class="nav-icon">▲</span>KPI Tracker</div>
+    <div class="nav-item" onclick="nav('revenue',this)"><span class="nav-icon">◆</span>Revenue</div>
+    <div class="nav-item" onclick="nav('audience',this)"><span class="nav-icon">●</span>Audience</div>
+    <div class="nav-item" onclick="nav('reporting',this)"><span class="nav-icon">▣</span>Reports</div>
+  </nav>
+  <div class="sidebar-footer">
+    <div style="margin-bottom:10px;padding:8px 10px;background:var(--panel-2);border-radius:var(--r);border:1px solid var(--border);display:flex;align-items:center;gap:8px;">
+      <span id="at-status-dot" style="width:7px;height:7px;border-radius:50%;background:var(--amber);flex-shrink:0;"></span>
+      <span id="at-status-label" style="font-size:10px;color:var(--muted);">Connecting to Airtable…</span>
+    </div>
+    <div class="user-card">
+      <div class="user-avatar">FJ</div>
+      <div><div class="user-name">FredJo</div><div class="user-role">Director · All access</div></div>
+    </div>
+  </div>
+</aside>
+
+<!-- ════ MAIN ════ -->
+<main class="main">
+
+<!-- ── DASHBOARD ─────────────────────────── -->
+<div id="page-dashboard" class="page active">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Executive <span>Dashboard</span></div>
+      <div class="page-subtitle">FredJo Clothing · Feb 28 – Mar 27, 2026 · 104 posts · 2 files reconciled</div>
+    </div>
+    <div class="header-actions">
+      <div class="period-selector">
+        <button class="period-btn active">28d</button>
+        <button class="period-btn">90d</button>
+      </div>
+      <button id="btn-seed" class="btn btn-ghost" onclick="seedDatabase()" title="One-time: pre-populate Airtable with real data">⚡ Seed Data</button>
+      <button class="btn btn-gold" onclick="openModal('task')">+ New Task</button>
+    </div>
+  </div>
+  <div class="page-body">
+
+    <div class="kpi-strip kpi-5">
+      <div class="kpi-card">
+        <div class="kpi-label">True Revenue</div>
+        <div class="kpi-value gold">$65.80</div>
+        <div class="kpi-sub">FB · Apr 1–9 MTD</div>
+        <div class="kpi-delta delta-down">↓ 18.5% of $2K target</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Page Views</div>
+        <div class="kpi-value">8.0M</div>
+        <div class="kpi-sub">Avg 887K/day</div>
+        <div class="kpi-delta delta-down">↓ vs 40M target</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">New Followers</div>
+        <div class="kpi-value green">+19,920</div>
+        <div class="kpi-sub">711 avg/day</div>
+        <div class="kpi-delta delta-up">↑ Organic growth solid</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Best Post</div>
+        <div class="kpi-value gold">$14.23</div>
+        <div class="kpi-sub">Peak day · Apr 02</div>
+        <div class="kpi-delta delta-info">918K views · 13s</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Daily Rev (latest)</div>
+        <div class="kpi-value gold">~$7</div>
+        <div class="kpi-sub">$7.31 avg · Apr 1–9</div>
+        <div class="kpi-delta delta-up">↑ Recovery vs Mar tail</div>
+      </div>
+    </div>
+
+    <div class="alert-card danger">
+      <span class="alert-icon">▲</span>
+      <div><div class="alert-title">Revenue tail dried up — ~$2/day since Mar 17, down from $24 peak</div>
+      <div class="alert-text">No new high-view post since the Mar 13 spike. The earning curve has flatlined. Last strong performer: Mar 12 crop shirt hack. A Millennial vs Gen-Z Reel published Friday at 14:00 would restart the cycle immediately.</div></div>
+    </div>
+    <div class="alert-card warn">
+      <span class="alert-icon">◉</span>
+      <div><div class="alert-title">New Collection format still absent — 11 weeks, zero drops</div>
+      <div class="alert-text">This single format generated 69% of all revenue Dec–Jan ($70/post avg). Last drop: Jan 6. Every week without a Collection Reel is ~$70–$150 in lost revenue.</div></div>
+    </div>
+    <div class="alert-card success">
+      <span class="alert-icon">↑</span>
+      <div><div class="alert-title">Bra hacks: new top-3 format discovered — $6.96/post, highest retention (12.6s avg)</div>
+      <div class="alert-text">Only 3–4 posts published. Outperforming 71 Fashion Hacks posts in per-post efficiency. Audience is 73% female 18–44. Scale to 3–4/week immediately.</div></div>
+    </div>
+
+    <div class="divider-label"><span>Content Performance</span></div>
+
+    <div class="section-row cols-32">
+      <div class="panel-card">
+        <div class="panel-head"><div class="panel-title">Revenue by category — corrected totals</div><span class="badge b-mid">104 posts</span></div>
+        <div class="panel-body" style="padding:0;">
+          <table class="data-table">
+            <thead><tr><th>#</th><th>Category</th><th>Posts</th><th>Total</th><th>Avg/post</th><th>Share</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><span class="sdot" style="background:var(--gold)"></span>1</td>
+                <td class="td-title">Millennial vs Gen-Z</td>
+                <td class="mono">8</td>
+                <td class="mono" style="color:var(--gold)">$70.54</td>
+                <td class="mono" style="color:var(--green)">$8.82</td>
+                <td><div class="progress-track" style="width:70px"><div class="progress-fill fill-gold" style="width:100%"></div></div></td>
+              </tr>
+              <tr>
+                <td><span class="sdot" style="background:var(--blue)"></span>2</td>
+                <td class="td-title">Fashion Hacks / Styling</td>
+                <td class="mono">34+</td>
+                <td class="mono">$94.02</td>
+                <td class="mono">$2.77</td>
+                <td><div class="progress-track" style="width:70px"><div class="progress-fill fill-blue" style="width:88%"></div></div></td>
+              </tr>
+              <tr>
+                <td><span class="sdot" style="background:var(--teal)"></span>3</td>
+                <td class="td-title">Bra hacks ★ New</td>
+                <td class="mono">3–4</td>
+                <td class="mono">$27.77</td>
+                <td class="mono" style="color:var(--green)">$6.96</td>
+                <td><div class="progress-track" style="width:70px"><div class="progress-fill fill-teal" style="width:26%"></div></div></td>
+              </tr>
+              <tr>
+                <td><span class="sdot" style="background:var(--mid)"></span>4</td>
+                <td class="td-title">Brand / Photo / Other</td>
+                <td class="mono">13+</td>
+                <td class="mono" style="color:var(--muted)">$1.38</td>
+                <td class="mono" style="color:var(--red)">$0.06</td>
+                <td><div class="progress-track" style="width:70px"><div class="progress-fill fill-red" style="width:1%"></div></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel-card">
+        <div class="panel-head"><div class="panel-title">Monthly revenue vs target</div></div>
+        <div class="panel-body">
+          <div style="margin-bottom:14px;">
+            <div style="font-size:9px;letter-spacing:.3em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Q1 Target: $2,000/month</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--red);line-height:1;">$369<span style="font-size:16px;color:var(--muted)">.51</span></div>
+            <div style="font-size:10px;color:var(--red);margin-top:2px;font-family:'DM Mono',monospace;">18.5% of monthly target</div>
+          </div>
+          <div style="margin-top:8px;padding:10px;background:var(--panel-2);border-radius:var(--r);border-left:2px solid var(--gold);font-size:11px;color:var(--silver);line-height:1.8;">
+            Revenue = Views × CPM<br>
+            CPM stable ~$0.03/1K views<br>
+            Views collapsed -84% since Dec<br>
+            <span style="color:var(--white);">Fix: restore Collection drop format</span>
+          </div>
+          <div style="margin-top:12px;">
+            <div style="font-size:9px;letter-spacing:.3em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;">To reach $2K/month need:</div>
+            <div style="font-size:11px;color:var(--silver);line-height:2;">
+              · <span style="color:var(--gold)">28 Collection Reels</span> at $70/post avg<br>
+              · <span style="color:var(--blue)">OR 227 Mill. vs Gen-Z</span> at $8.82/post<br>
+              · <span style="color:var(--muted)">OR 722 Fashion Hacks</span> at $2.77/post
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider-label"><span>Daily Revenue Trend (File 2 — daily breakdown)</span></div>
+    <div class="panel-card">
+      <div class="panel-head"><div class="panel-title">Earnings per day · Apr 1 – Apr 9</div><span class="badge b-red">April MTD · $65.80</span></div>
+      <div class="panel-body">
+        <div class="rev-bars" style="height:80px;gap:4px;">
+          <div class="rev-bar" style="height:39%;background:var(--blue)" data-tip="Apr 01: $5.53"></div>
+          <div class="rev-bar" style="height:100%;background:var(--gold)" data-tip="Apr 02: $14.23"></div>
+          <div class="rev-bar" style="height:46%;background:var(--blue)" data-tip="Apr 03: $6.54"></div>
+          <div class="rev-bar" style="height:32%;background:var(--mid)" data-tip="Apr 04: $4.50"></div>
+          <div class="rev-bar" style="height:89%;background:var(--gold)" data-tip="Apr 05: $12.64"></div>
+          <div class="rev-bar" style="height:47%;background:var(--blue)" data-tip="Apr 06: $6.75"></div>
+          <div class="rev-bar" style="height:79%;background:var(--gold)" data-tip="Apr 07: $11.26"></div>
+          <div class="rev-bar" style="height:30%;background:var(--mid)" data-tip="Apr 08: $4.22"></div>
+          <div class="rev-bar" style="height:2%;background:var(--mid)" data-tip="Apr 09: $0.13"></div>
+        </div>
+        <div class="rev-bar" style="height:31%;background:var(--blue)" data-tip="Mar 01: $7.33"></div>
+          <div class="rev-bar" style="height:31%;background:var(--blue)" data-tip="Mar 02: $7.28"></div>
+          <div class="rev-bar" style="height:38%;background:var(--blue)" data-tip="Mar 03: $9.10"></div>
+          <div class="rev-bar" style="height:32%;background:var(--blue)" data-tip="Mar 04: $7.63"></div>
+          <div class="rev-bar" style="height:24%;background:var(--blue)" data-tip="Mar 05: $5.66"></div>
+          <div class="rev-bar" style="height:23%;background:var(--blue)" data-tip="Mar 06: $5.36"></div>
+          <div class="rev-bar" style="height:69%;background:var(--gold)" data-tip="Mar 07: $16.33"></div>
+          <div class="rev-bar" style="height:60%;background:var(--gold)" data-tip="Mar 08: $14.35"></div>
+          <div class="rev-bar" style="height:80%;background:var(--gold)" data-tip="Mar 09: $19.05"></div>
+          <div class="rev-bar" style="height:92%;background:var(--gold)" data-tip="Mar 10: $21.75"></div>
+          <div class="rev-bar" style="height:65%;background:var(--gold)" data-tip="Mar 11: $15.36"></div>
+          <div class="rev-bar" style="height:30%;background:var(--blue)" data-tip="Mar 12: $7.18"></div>
+          <div class="rev-bar" style="height:100%;background:var(--red)" data-tip="Mar 13: $23.71 — PEAK"></div>
+          <div class="rev-bar" style="height:23%;background:var(--blue)" data-tip="Mar 14: $5.42"></div>
+          <div class="rev-bar" style="height:20%;background:var(--blue)" data-tip="Mar 15: $4.72"></div>
+          <div class="rev-bar" style="height:20%;background:var(--blue)" data-tip="Mar 16: $4.74"></div>
+          <div class="rev-bar" style="height:10%;background:var(--mid)" data-tip="Mar 17: $2.31"></div>
+          <div class="rev-bar" style="height:8%;background:var(--mid)" data-tip="Mar 18: $1.97"></div>
+          <div class="rev-bar" style="height:9%;background:var(--mid)" data-tip="Mar 19: $2.08"></div>
+          <div class="rev-bar" style="height:9%;background:var(--mid)" data-tip="Mar 20: $2.07"></div>
+          <div class="rev-bar" style="height:8%;background:var(--mid)" data-tip="Mar 21: $1.97"></div>
+          <div class="rev-bar" style="height:8%;background:var(--mid)" data-tip="Mar 22: $1.96"></div>
+          <div class="rev-bar" style="height:8%;background:var(--mid)" data-tip="Mar 23: $1.82"></div>
+          <div class="rev-bar" style="height:7%;background:var(--mid)" data-tip="Mar 24: $1.69"></div>
+          <div class="rev-bar" style="height:9%;background:var(--mid)" data-tip="Mar 25: $2.14"></div>
+          <div class="rev-bar" style="height:7%;background:var(--mid)" data-tip="Mar 26: $1.59"></div>
+          <div class="rev-bar" style="height:10%;background:var(--mid)" data-tip="Mar 27: $2.28"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:5px;font-family:'DM Mono',monospace;">
+          <span>Feb 28</span><span>Mar 7–13 peak window</span><span>→ Revenue dead from Mar 17</span><span>Mar 27</span>
+        </div>
+        <div style="display:flex;gap:16px;margin-top:8px;font-size:10px;color:var(--muted);">
+          <span><span style="display:inline-block;width:8px;height:8px;background:var(--red);border-radius:1px;margin-right:3px;"></span>Peak $23.71</span>
+          <span><span style="display:inline-block;width:8px;height:8px;background:var(--gold);border-radius:1px;margin-right:3px;"></span>Strong $14–22</span>
+          <span><span style="display:inline-block;width:8px;height:8px;background:var(--blue);border-radius:1px;margin-right:3px;"></span>Normal $5–9</span>
+          <span><span style="display:inline-block;width:8px;height:8px;background:var(--mid);border-radius:1px;margin-right:3px;"></span>Dead ~$2</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── FREELANCERS ─────────────────────────── -->
+<div id="page-freelancers" class="page">
+  <div class="page-header">
+    <div><div class="page-title">Team <span>Freelancers</span></div><div class="page-subtitle">Profiles · Scorecards · KPI performance</div></div>
+    <div class="header-actions"><button class="btn btn-ghost">+ Add Freelancer</button></div>
+  </div>
+  <div class="page-body">
+    <div class="fl-grid">
+      <div class="fl-card">
+        <div class="fl-top">
+          <div class="fl-avatar fahim">F</div>
+          <div><div class="fl-name">Fahim</div><span class="badge b-blue">Content & SEO</span></div>
+        </div>
+        <div class="score-row">
+          <div class="score-pill"><div class="score-val s-amber">68</div><div class="score-lbl">Score</div></div>
+          <div class="score-pill"><div class="score-val s-green">82</div><div class="score-lbl">Production</div></div>
+          <div class="score-pill"><div class="score-val s-amber">71</div><div class="score-lbl">Quality</div></div>
+          <div class="score-pill"><div class="score-val s-red">44</div><div class="score-lbl">Revenue</div></div>
+        </div>
+        <div class="progress-row">
+          <div class="progress-label"><span>FB Reels cadence (target: 3/day)</span><span>1.8/day avg</span></div>
+          <div class="progress-track"><div class="progress-fill fill-amber" style="width:60%"></div></div>
+        </div>
+        <div class="progress-row">
+          <div class="progress-label"><span>YT Shorts (target: 2/day)</span><span>1.2/day avg</span></div>
+          <div class="progress-track"><div class="progress-fill fill-red" style="width:60%"></div></div>
+        </div>
+        <div class="progress-row">
+          <div class="progress-label"><span>Brand compliance (target: 100%)</span><span>88%</span></div>
+          <div class="progress-track"><div class="progress-fill fill-green" style="width:88%"></div></div>
+        </div>
+        <div class="progress-row">
+          <div class="progress-label"><span>SEO reports submitted</span><span>3/4</span></div>
+          <div class="progress-track"><div class="progress-fill fill-gold" style="width:75%"></div></div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:5px;flex-wrap:wrap;">
+          <span class="pp pp-fb">Facebook</span><span class="pp pp-ig">Instagram</span><span class="pp pp-tt">TikTok</span><span class="pp pp-yt">YouTube</span>
+        </div>
+      </div>
+
+      <div class="fl-card">
+        <div class="fl-top">
+          <div class="fl-avatar naeem">N</div>
+          <div><div class="fl-name">Naeem</div><span class="badge b-teal">Growth & Community</span></div>
+        </div>
+        <div class="score-row">
+          <div class="score-pill"><div class="score-val s-red">37</div><div class="score-lbl">Score</div></div>
+          <div class="score-pill"><div class="score-val s-amber">55</div><div class="score-lbl">Strategy</div></div>
+          <div class="score-pill"><div class="score-val s-red">30</div><div class="score-lbl">Revenue</div></div>
+          <div class="score-pill"><div class="score-val s-amber">42</div><div class="score-lbl">Community</div></div>
+        </div>
+        <div class="progress-row">
+          <div class="progress-label"><span>Monthly revenue vs $2,000 target</span><span>18.5%</span></div>
+          <div class="progress-track"><div class="progress-fill fill-red" style="width:18%"></div></div>
+        </div>
+        <div class="progress-row">
+          <div class="progress-label"><span>FB Views vs 55M target</span><span>24.7M</span></div>
+          <div class="progress-track"><div class="progress-fill fill-amber" style="width:45%"></div></div>
+        </div>
+        <div class="progress-row">
+          <div class="progress-label"><span>Comment response rate (target: ≥80%)</span><span>65%</span></div>
+          <div class="progress-track"><div class="progress-fill fill-amber" style="width:65%"></div></div>
+        </div>
+        <div class="progress-row">
+          <div class="progress-label"><span>Viral Reels ≥500K in 72h (target: 2/mo)</span><span>1/mo</span></div>
+          <div class="progress-track"><div class="progress-fill fill-amber" style="width:50%"></div></div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:5px;flex-wrap:wrap;">
+          <span class="pp pp-fb">Facebook</span><span class="pp pp-yt">YouTube</span><span class="badge b-teal">Community</span><span class="badge b-amber">Monetisation</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider-label"><span>Detailed Scorecards</span></div>
+    <div class="section-row cols-2">
+      <div class="panel-card">
+        <div class="panel-head"><div class="panel-title">Fahim — Production KPIs</div><span class="badge b-blue">Content & SEO</span></div>
+        <div class="panel-body">
+          <div class="sc-grid">
+            <div class="sc-item"><div class="sc-label">FB Reels/day</div><div class="sc-value" style="color:var(--amber)">1.8</div><div class="sc-target">Target: 3</div></div>
+            <div class="sc-item"><div class="sc-label">YT Shorts/day</div><div class="sc-value" style="color:var(--amber)">1.2</div><div class="sc-target">Target: 2</div></div>
+            <div class="sc-item"><div class="sc-label">IG Reels/week</div><div class="sc-value" style="color:var(--green)">4</div><div class="sc-target">Target: 4–5</div></div>
+            <div class="sc-item"><div class="sc-label">TikTok/day</div><div class="sc-value" style="color:var(--red)">0.6</div><div class="sc-target">Target: 1</div></div>
+            <div class="sc-item"><div class="sc-label">YT Long-form</div><div class="sc-value" style="color:var(--green)">2</div><div class="sc-target">2/week ✓</div></div>
+            <div class="sc-item"><div class="sc-label">SEO Reports</div><div class="sc-value" style="color:var(--gold)">3/4</div><div class="sc-target">Weekly</div></div>
+            <div class="sc-item"><div class="sc-label">Brand Comply</div><div class="sc-value" style="color:var(--green)">88%</div><div class="sc-target">Target: 100%</div></div>
+            <div class="sc-item"><div class="sc-label">Cross-platform</div><div class="sc-value" style="color:var(--amber)">72%</div><div class="sc-target">Target: 100%</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel-card">
+        <div class="panel-head"><div class="panel-title">Naeem — Revenue KPIs</div><span class="badge b-teal">Growth & Community</span></div>
+        <div class="panel-body">
+          <div class="sc-grid">
+            <div class="sc-item"><div class="sc-label">FB Views/mo</div><div class="sc-value" style="color:var(--amber)">24.7M</div><div class="sc-target">Target: 55M</div></div>
+            <div class="sc-item"><div class="sc-label">Viral Reels</div><div class="sc-value" style="color:var(--amber)">1/mo</div><div class="sc-target">Target: 4</div></div>
+            <div class="sc-item"><div class="sc-label">Revenue/mo</div><div class="sc-value" style="color:var(--red)">$369</div><div class="sc-target">Target: $2K</div></div>
+            <div class="sc-item"><div class="sc-label">YT Watch h</div><div class="sc-value" style="color:var(--amber)">620h</div><div class="sc-target">Target: 2K</div></div>
+            <div class="sc-item"><div class="sc-label">Comment Rate</div><div class="sc-value" style="color:var(--amber)">65%</div><div class="sc-target">Target: ≥80%</div></div>
+            <div class="sc-item"><div class="sc-label">YT Subs</div><div class="sc-value" style="color:var(--amber)">2,353</div><div class="sc-target">Target: 5K</div></div>
+            <div class="sc-item"><div class="sc-label">Daily Revenue</div><div class="sc-value" style="color:var(--red)">~$2</div><div class="sc-target">Needed: $67/day</div></div>
+            <div class="sc-item"><div class="sc-label">New Follows</div><div class="sc-value" style="color:var(--green)">711</div><div class="sc-target">Per day ✓</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TASKS ─────────────────────────── -->
+<div id="page-tasks" class="page">
+  <div class="page-header">
+    <div><div class="page-title">Tasks & <span>Missions</span></div><div class="page-subtitle">Assign, track and validate all freelancer work</div></div>
+    <div class="header-actions"><button class="btn btn-gold" onclick="openModal('task')">+ New Task</button></div>
+  </div>
+  <div class="page-body">
+    <div class="tabs">
+      <div class="tab active" onclick="setTab(this)">Kanban</div>
+      <div class="tab" onclick="setTab(this)">List</div>
+    </div>
+    <div class="kanban">
+      <div class="kanban-col">
+        <div class="kanban-head"><span class="kanban-title" style="color:var(--muted)">To Do</span><span id="cnt-todo" class="kanban-count">4</span></div>
+        <div id="col-todo" class="kanban-items">
+          <div class="kanban-card">
+            <div class="kc-title">New Collection Reel — Spring Drop</div>
+            <div class="kc-meta"><span class="pp pp-fb">FB</span><span class="badge b-red">CRITICAL</span></div>
+            <div class="kc-date">Due: Apr 4 (Friday) · 14:00</div>
+          </div>
+          <div class="kanban-card">
+            <div class="kc-title">Millennial vs Gen-Z batch × 4</div>
+            <div class="kc-meta"><span class="pp pp-fb">FB</span><div class="fl-avatar fahim" style="width:18px;height:18px;font-size:8px;margin-left:auto;">F</div></div>
+            <div class="kc-date">Due: Apr 7 · publish Fri 14:00</div>
+          </div>
+          <div class="kanban-card">
+            <div class="kc-title">Bra hacks batch × 3</div>
+            <div class="kc-meta"><span class="pp pp-fb">FB</span><div class="fl-avatar fahim" style="width:18px;height:18px;font-size:8px;margin-left:auto;">F</div></div>
+            <div class="kc-date">Due: Apr 5 · $6.96 avg expected</div>
+          </div>
+          <div class="kanban-card">
+            <div class="kc-title">Weekly SEO Report — W13</div>
+            <div class="kc-meta"><span class="badge b-blue">SEO</span><div class="fl-avatar fahim" style="width:18px;height:18px;font-size:8px;margin-left:auto;">F</div></div>
+            <div class="kc-date">Due: Mar 29</div>
+          </div>
+        </div>
+      </div>
+      <div class="kanban-col">
+        <div class="kanban-head"><span class="kanban-title" style="color:var(--blue)">In Progress</span><span id="cnt-inprogress" class="kanban-count">3</span></div>
+        <div id="col-inprogress" class="kanban-items">
+          <div class="kanban-card" style="border-color:rgba(74,158,255,.2)">
+            <div class="kc-title">FB Reels daily — week 13</div>
+            <div class="kc-meta"><span class="pp pp-fb">3/day target</span><div class="fl-avatar fahim" style="width:18px;height:18px;font-size:8px;margin-left:auto;">F</div></div>
+            <div style="margin-top:7px;"><div class="progress-track"><div class="progress-fill fill-amber" style="width:60%"></div></div><div style="font-size:9px;color:var(--muted);margin-top:3px;">1.8/day avg this week</div></div>
+          </div>
+          <div class="kanban-card" style="border-color:rgba(74,158,255,.2)">
+            <div class="kc-title">Monthly Trend Report — March</div>
+            <div class="kc-meta"><span class="badge b-teal">Strategy</span><div class="fl-avatar naeem" style="width:18px;height:18px;font-size:8px;margin-left:auto;">N</div></div>
+            <div style="margin-top:7px;"><div class="progress-track"><div class="progress-fill fill-blue" style="width:40%"></div></div><div style="font-size:9px;color:var(--muted);margin-top:3px;">40% complete</div></div>
+          </div>
+          <div class="kanban-card" style="border-color:rgba(74,158,255,.2)">
+            <div class="kc-title">IG Reels week 13</div>
+            <div class="kc-meta"><span class="pp pp-ig">IG</span><div class="fl-avatar fahim" style="width:18px;height:18px;font-size:8px;margin-left:auto;">F</div></div>
+            <div style="margin-top:7px;"><div class="progress-track"><div class="progress-fill fill-blue" style="width:50%"></div></div><div style="font-size:9px;color:var(--muted);margin-top:3px;">2/4 done</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="kanban-col">
+        <div class="kanban-head"><span class="kanban-title" style="color:var(--amber)">In Review</span><span id="cnt-review" class="kanban-count">2</span></div>
+        <div id="col-review" class="kanban-items">
+          <div class="kanban-card" style="border-color:rgba(224,154,58,.25)">
+            <div class="kc-title">Weekly Report W12 — Naeem</div>
+            <div class="kc-meta"><span class="badge b-amber">Reporting</span><div class="fl-avatar naeem" style="width:18px;height:18px;font-size:8px;margin-left:auto;">N</div></div>
+            <div class="kc-date" style="color:var(--amber)">⏳ Awaiting approval</div>
+          </div>
+          <div class="kanban-card" style="border-color:rgba(224,154,58,.25)">
+            <div class="kc-title">SEO Audit W12 — Fahim</div>
+            <div class="kc-meta"><span class="badge b-blue">SEO</span><div class="fl-avatar fahim" style="width:18px;height:18px;font-size:8px;margin-left:auto;">F</div></div>
+            <div class="kc-date" style="color:var(--amber)">⏳ Awaiting approval</div>
+          </div>
+        </div>
+      </div>
+      <div class="kanban-col">
+        <div class="kanban-head"><span class="kanban-title" style="color:var(--green)">Done</span><span id="cnt-done" class="kanban-count">18</span></div>
+        <div id="col-done" class="kanban-items">
+          <div class="kanban-card" style="opacity:.55">
+            <div class="kc-title" style="text-decoration:line-through">Fashion Hacks × 12 W12</div>
+            <div class="kc-meta"><span class="pp pp-fb">FB</span><span style="font-size:10px;color:var(--green);margin-left:auto;">✓</span></div>
+          </div>
+          <div class="kanban-card" style="opacity:.55">
+            <div class="kc-title" style="text-decoration:line-through">Bra Hacks × 3 W11-12</div>
+            <div class="kc-meta"><span class="pp pp-fb">FB</span><span style="font-size:10px;color:var(--green);margin-left:auto;">✓</span></div>
+          </div>
+          <div class="kanban-card" style="opacity:.55">
+            <div class="kc-title" style="text-decoration:line-through">YT Long-form × 2 W12</div>
+            <div class="kc-meta"><span class="pp pp-yt">YT</span><span style="font-size:10px;color:var(--green);margin-left:auto;">✓</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── KPI TRACKER ─────────────────────────── -->
+<div id="page-kpis" class="page">
+  <div class="page-header">
+    <div><div class="page-title">KPI <span>Tracker</span></div><div class="page-subtitle">All platform targets · Baseline vs Current vs Q1 2026 target</div></div>
+    <div class="header-actions"><div class="period-selector"><button class="period-btn active">Q1 2026</button><button class="period-btn">Q3 2025</button></div></div>
+  </div>
+  <div class="page-body">
+    <div class="section-row cols-2" style="margin-bottom:20px;">
+      <div class="panel-card">
+        <div class="panel-head"><div class="panel-title">Facebook</div><span class="pp pp-fb">Meta</span></div>
+        <div class="panel-body" style="padding:0;">
+          <table class="data-table">
+            <thead><tr><th>Metric</th><th>Baseline</th><th>Q1 Target</th><th>Current</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td class="td-title">Followers</td><td class="mono">550K</td><td class="mono" style="color:var(--gold)">800K</td><td class="mono" style="color:var(--amber)">~555K</td><td><span class="badge b-amber">Below</span></td></tr>
+              <tr><td class="td-title">Monthly Views</td><td class="mono">40M</td><td class="mono" style="color:var(--gold)">70M</td><td class="mono" style="color:var(--amber)">24.7M</td><td><span class="badge b-amber">Below</span></td></tr>
+              <tr><td class="td-title">Viral Reels/mo</td><td class="mono">—</td><td class="mono" style="color:var(--gold)">4/mo</td><td class="mono" style="color:var(--amber)">1/mo</td><td><span class="badge b-amber">Below</span></td></tr>
+              <tr><td class="td-title">Monthly Revenue</td><td class="mono">—</td><td class="mono" style="color:var(--gold)">$2,000</td><td class="mono" style="color:var(--red)">$369.51</td><td><span class="badge b-red">Critical</span></td></tr>
+              <tr><td class="td-title">New Follows/day</td><td class="mono">—</td><td class="mono" style="color:var(--gold)">—</td><td class="mono" style="color:var(--green)">711</td><td><span class="badge b-green">Good</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="panel-card">
+        <div class="panel-head"><div class="panel-title">YouTube</div><span class="pp pp-yt">YT</span></div>
+        <div class="panel-body" style="padding:0;">
+          <table class="data-table">
+            <thead><tr><th>Metric</th><th>Baseline</th><th>Q1 Target</th><th>Current</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td class="td-title">Subscribers</td><td class="mono">2,353</td><td class="mono" style="color:var(--gold)">15K</td><td class="mono" style="color:var(--amber)">~2.5K</td><td><span class="badge b-amber">Below</span></td></tr>
+              <tr><td class="td-title">Watch Time/mo</td><td class="mono">481h</td><td class="mono" style="color:var(--gold)">2,000h</td><td class="mono" style="color:var(--amber)">620h</td><td><span class="badge b-amber">Below</span></td></tr>
+              <tr><td class="td-title">Blended RPM</td><td class="mono">$0.14</td><td class="mono" style="color:var(--gold)">$3.00+</td><td class="mono" style="color:var(--amber)">~$0.80</td><td><span class="badge b-amber">Progress</span></td></tr>
+              <tr><td class="td-title">Monthly Revenue</td><td class="mono">—</td><td class="mono" style="color:var(--gold)">$800–1,200</td><td class="mono" style="color:var(--red)">~$40</td><td><span class="badge b-red">Critical</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="section-row cols-2">
+      <div class="panel-card">
+        <div class="panel-head"><div class="panel-title">Instagram</div><span class="pp pp-ig">IG</span></div>
+        <div class="panel-body" style="padding:0;">
+          <table class="data-table">
+            <thead><tr><th>Metric</th><th>Baseline</th><th>Q1 Target</th><th>Current</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td class="td-title">Followers</td><td class="mono">17.3K</td><td class="mono" style="color:var(--gold)">50K</td><td class="mono" style="color:var(--amber)">~18K</td><td><span class="badge b-amber">Below</span></td></tr>
+              <tr><td class="td-title">Engagement Rate</td><td class="mono">TBC</td><td class="mono" style="color:var(--gold)">≥5%</td><td class="mono" style="color:var(--muted)">No data</td><td><span class="badge b-mid">Missing</span></td></tr>
+              <tr><td class="td-title">Reels/week</td><td class="mono">—</td><td class="mono" style="color:var(--gold)">4–5</td><td class="mono" style="color:var(--green)">4</td><td><span class="badge b-green">On track</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="panel-card">
+        <div class="panel-head"><div class="panel-title">TikTok</div><span class="pp pp-tt">TT</span></div>
+        <div class="panel-body" style="padding:0;">
+          <table class="data-table">
+            <thead><tr><th>Metric</th><th>Baseline</th><th>Q1 Target</th><th>Current</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td class="td-title">Followers</td><td class="mono">2,796</td><td class="mono" style="color:var(--gold)">25K</td><td class="mono" style="color:var(--amber)">~3.2K</td><td><span class="badge b-amber">Below</span></td></tr>
+              <tr><td class="td-title">Posts/day</td><td class="mono">—</td><td class="mono" style="color:var(--gold)">1/day</td><td class="mono" style="color:var(--red)">0.6/day</td><td><span class="badge b-red">Below</span></td></tr>
+              <tr><td class="td-title">Avg Views</td><td class="mono">TBC</td><td class="mono" style="color:var(--gold)">50K</td><td class="mono" style="color:var(--muted)">No data</td><td><span class="badge b-mid">Missing</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── INSIGHTS ─────────────────────────── -->
+<div id="page-insights" class="page">
+  <div class="page-header">
+    <div><div class="page-title">AI-Powered <span>Insights</span></div><div class="page-subtitle">Automated recommendations from your real data — Feb 28 – Mar 27</div></div>
+  </div>
+  <div class="page-body">
+    <div class="kpi-strip kpi-4">
+      <div class="kpi-card"><div class="kpi-label">Critical alerts</div><div class="kpi-value red">4</div><div class="kpi-sub">Action required now</div></div>
+      <div class="kpi-card"><div class="kpi-label">Opportunities</div><div class="kpi-value amber">3</div><div class="kpi-sub">Revenue levers</div></div>
+      <div class="kpi-card"><div class="kpi-label">On track</div><div class="kpi-value green">2</div><div class="kpi-sub">KPIs</div></div>
+      <div class="kpi-card"><div class="kpi-label">Data gaps</div><div class="kpi-value" style="color:var(--silver)">4</div><div class="kpi-sub">Missing metrics</div></div>
+    </div>
+
+    <div class="divider-label"><span>Critical</span></div>
+
+    <div class="insight-card ig-red">
+      <div class="insight-header"><span class="insight-tag" style="background:var(--red-dim);color:var(--red)">CRITICAL</span><div class="insight-title">Revenue tail dead at ~$2/day — no new viral post in 10 days</div></div>
+      <div class="insight-body">Daily revenue peaked at $23.71 on Mar 13 then collapsed to ~$2/day from Mar 17. The earning curve only restarts when a new post achieves high views. Every day without a 500K+ post is $20–$22 in lost potential revenue. The best format to trigger this: Millennial vs Gen-Z Reel published Friday at 14:00.</div>
+      <div class="insight-actions"><button class="btn btn-gold" onclick="nav('tasks',null)">→ Create task now</button></div>
+    </div>
+
+    <div class="insight-card ig-red">
+      <div class="insight-header"><span class="insight-tag" style="background:var(--red-dim);color:var(--red)">CRITICAL</span><div class="insight-title">No Collection drop in 11 weeks — $70/post format completely abandoned</div></div>
+      <div class="insight-body">The New Collection Reel format historically earned $70.2/post average and represented 69% of all Dec–Jan revenue. Last published: January 6. In 11 weeks, this is an estimated $3,000–$4,000 in missed revenue. A Spring drop Reel (under 15s, product reveal, WELCOME20 code) should go live this Friday at 14:00.</div>
+      <div class="insight-actions"><button class="btn btn-gold" onclick="openModal('task')">→ Schedule Spring Drop</button></div>
+    </div>
+
+    <div class="insight-card ig-red">
+      <div class="insight-header"><span class="insight-tag" style="background:var(--red-dim);color:var(--red)">CRITICAL</span><div class="insight-title">Posting 46 Reels/month diluting reach — reduce to 20–25 max</div></div>
+      <div class="insight-body">Historical data: 13 Reels in December = $1,139 revenue ($87.6/Reel avg). 46 Reels in February = $490 ($10.7/Reel avg). Tripling volume divided distribution by 4. The algorithm punishes page floods. Quality beats quantity every time. Target: 20–25 Reels/month, prioritised by highest-earning formats.</div>
+    </div>
+
+    <div class="insight-card ig-red">
+      <div class="insight-header"><span class="insight-tag" style="background:var(--red-dim);color:var(--red)">CRITICAL</span><div class="insight-title">Photos generating $0.02/post — stop publishing immediately</div></div>
+      <div class="insight-body">13 photo posts this period earned $0.28 total ($0.02 avg). Facebook's algorithm does not distribute photo posts at meaningful scale in 2026. Every hour spent creating a photo is an hour not spent on a Reel. Redirect all photo production time to video content under 15 seconds.</div>
+    </div>
+
+    <div class="divider-label"><span>Opportunities</span></div>
+
+    <div class="insight-card ig-gold">
+      <div class="insight-header"><span class="insight-tag" style="background:var(--gold-dim);color:var(--gold)">OPPORTUNITY</span><div class="insight-title">Bra hacks: $6.96/post avg, highest retention at 12.6s — massively underused</div></div>
+      <div class="insight-body">Only 3–4 posts of this type. Yet it's the highest-retention format in the dataset and earns more per post than 34 Fashion Hacks combined. 73% of your audience is female aged 18–44 — exactly this content's target. Publish 3–4 bra hack Reels per week immediately. Expect $6–9/post minimum.</div>
+      <div class="insight-actions"><button class="btn btn-gold" onclick="openModal('task')">→ Assign to Fahim</button></div>
+    </div>
+
+    <div class="insight-card ig-gold">
+      <div class="insight-header"><span class="insight-tag" style="background:var(--gold-dim);color:var(--gold)">OPPORTUNITY</span><div class="insight-title">Friday 14:00 is 4× more valuable than any other time slot</div></div>
+      <div class="insight-body">Friday generates 1.26M average views — 64% more than Sunday (767K). Hour 14:00 generates 1.56M avg views and $18.20/post avg. This combination has been used only 2 times in 58 posts. All highest-priority content (Collection drop, Mill. vs Gen-Z) should be scheduled Friday 14:00 as standard protocol.</div>
+    </div>
+
+    <div class="insight-card ig-gold">
+      <div class="insight-header"><span class="insight-tag" style="background:var(--gold-dim);color:var(--gold)">OPPORTUNITY</span><div class="insight-title">US audience (6.4%) earns 10–20× more than Philippines/Nigeria — target shift needed</div></div>
+      <div class="insight-body">Philippines (7.9%), Nigeria (4.2%), Bangladesh (3.2%) = CPM ~$0.002. United States (6.4%) = CPM ~$0.05–0.15. Same views, 10–20× revenue difference. Action plan: captions with US cultural references, posting at 14:00 UTC-5 (US East), trending US hashtags, US fashion seasons. Goal: shift US audience share from 6.4% to 12–15%.</div>
+    </div>
+
+    <div class="divider-label"><span>Data Gaps — Fahim must report these</span></div>
+    <div class="alert-card info">
+      <span class="alert-icon">i</span>
+      <div><div class="alert-title">4 KPIs have no data — required in weekly report every Friday</div>
+      <div class="alert-text">Missing: Instagram engagement rate, TikTok avg views per video, TikTok watch time %, IG Reels monthly reach. Naeem must submit these every Friday before 18:00 or it counts as a missed deliverable.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── REVENUE ─────────────────────────── -->
+<div id="page-revenue" class="page">
+  <div class="page-header">
+    <div><div class="page-title">Revenue <span>Analysis</span></div><div class="page-subtitle">Corrected totals from 2 export files · Feb 28 – Mar 27, 2026</div></div>
+  </div>
+  <div class="page-body">
+    <div class="kpi-strip kpi-5">
+      <div class="kpi-card"><div class="kpi-label">True total</div><div class="kpi-value gold">$369.51</div><div class="kpi-sub">104 posts combined</div></div>
+      <div class="kpi-card"><div class="kpi-label">File 1 (753…)</div><div class="kpi-value amber">$171.01</div><div class="kpi-sub">58 posts · lifetime</div></div>
+      <div class="kpi-card"><div class="kpi-label">File 2 (940…)</div><div class="kpi-value amber">$198.50</div><div class="kpi-sub">46 posts · daily</div></div>
+      <div class="kpi-card"><div class="kpi-label">Best post (F2)</div><div class="kpi-value gold">$45.32</div><div class="kpi-sub">Mill. vs Gen-Z · Mar 01</div></div>
+      <div class="kpi-card"><div class="kpi-label">vs $2K target</div><div class="kpi-value red">18.5%</div><div class="kpi-sub">Need $1,630 more</div></div>
+    </div>
+
+    <div class="alert-card info">
+      <span class="alert-icon">i</span>
+      <div><div class="alert-title">Why 2 files show different numbers — explained</div>
+      <div class="alert-text">File 753… = "Lifetime" export (1 row per post, total earnings ever). File 940… = "Daily" export (1 row per post per day — same post appears 28 times). Zero post overlap between the two files. Always export both to get complete revenue picture. The daily file shows WHEN each dollar was earned; the lifetime file shows WHICH post earned most overall.</div></div>
+    </div>
+
+    <div class="divider-label"><span>Top Posts — File 2 aggregated</span></div>
+    <div class="panel-card">
+      <div class="panel-head"><div class="panel-title">Top 12 earners — daily totals aggregated</div><span class="badge b-gold">$198.50 from 46 posts</span></div>
+      <div class="panel-body" style="padding:0;">
+        <table class="data-table">
+          <thead><tr><th>#</th><th>Post</th><th>Date</th><th>Earnings</th><th>% total</th><th>Format</th></tr></thead>
+          <tbody>
+            <tr><td style="color:var(--gold)">1</td><td><div class="td-title">Millennial vs Gen-Z outfit vote</div></td><td class="mono">Mar 01</td><td class="mono" style="color:var(--green);font-weight:600">$45.32</td><td class="mono">22.8%</td><td><span class="badge b-gold">Mill. Gen-Z</span></td></tr>
+            <tr><td>2</td><td><div class="td-title">Crop shirt perfectly — YES/NO</div></td><td class="mono">Feb 27</td><td class="mono" style="font-weight:600">$27.38</td><td class="mono">13.8%</td><td><span class="badge b-blue">Fashion hack</span></td></tr>
+            <tr><td>3</td><td><div class="td-title">Millennial VS GEN-Z vote favorite</div></td><td class="mono">Mar 11</td><td class="mono" style="font-weight:600">$25.22</td><td class="mono">12.7%</td><td><span class="badge b-gold">Mill. Gen-Z</span></td></tr>
+            <tr><td>4</td><td><div class="td-title">Easy bra hack avoid straps</div></td><td class="mono">Feb 28</td><td class="mono" style="font-weight:600">$18.18</td><td class="mono">9.2%</td><td><span class="badge b-teal">Bra hack</span></td></tr>
+            <tr><td>5</td><td><div class="td-title">2 viral t-shirt hacks</div></td><td class="mono">Mar 07</td><td class="mono" style="font-weight:600">$15.92</td><td class="mono">8.0%</td><td><span class="badge b-blue">Fashion hack</span></td></tr>
+            <tr><td>6</td><td><div class="td-title">Crop your shirt — YES or NO</div></td><td class="mono">Mar 12</td><td class="mono" style="font-weight:600">$11.15</td><td class="mono">5.6%</td><td><span class="badge b-blue">Fashion hack</span></td></tr>
+            <tr><td>7</td><td><div class="td-title">Bra hack avoid straps v2</div></td><td class="mono">Mar 05</td><td class="mono">$5.90</td><td class="mono">3.0%</td><td><span class="badge b-teal">Bra hack</span></td></tr>
+            <tr><td>8</td><td><div class="td-title">He styles me in HIS clothes</div></td><td class="mono">Mar 07</td><td class="mono">$5.76</td><td class="mono">2.9%</td><td><span class="badge b-blue">Styling</span></td></tr>
+            <tr><td>9</td><td><div class="td-title">2 ways to style a dress</div></td><td class="mono">Mar 09</td><td class="mono">$4.01</td><td class="mono">2.0%</td><td><span class="badge b-blue">Dress</span></td></tr>
+            <tr><td>10</td><td><div class="td-title">How to style a dress cold</div></td><td class="mono">Mar 08</td><td class="mono">$3.94</td><td class="mono">2.0%</td><td><span class="badge b-blue">Dress</span></td></tr>
+            <tr style="opacity:.6"><td colspan="6" style="font-size:10px;color:var(--muted);padding:8px 12px;">↓ 36 more posts — avg $0.93 each — total $36.22</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="divider-label"><span>Format ROI Analysis</span></div>
+    <div class="section-row cols-2">
+      <div class="panel-card">
+        <div class="panel-head"><div class="panel-title">Revenue by duration bucket</div></div>
+        <div class="panel-body">
+          <div style="margin-bottom:14px;">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--silver);margin-bottom:5px;"><span>Under 15s (25 posts)</span><span style="font-family:'DM Mono',monospace;color:var(--gold)">$4.45/post avg</span></div>
+            <div class="progress-track" style="height:8px"><div class="progress-fill fill-gold" style="width:100%"></div></div>
+          </div>
+          <div style="margin-bottom:14px;">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--silver);margin-bottom:5px;"><span>15–30s (20 posts)</span><span style="font-family:'DM Mono',monospace;color:var(--blue)">$2.97/post avg</span></div>
+            <div class="progress-track" style="height:8px"><div class="progress-fill fill-blue" style="width:67%"></div></div>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--silver);margin-bottom:5px;"><span>Photos / static (13 posts)</span><span style="font-family:'DM Mono',monospace;color:var(--red)">$0.02/post avg</span></div>
+            <div class="progress-track" style="height:8px"><div class="progress-fill fill-red" style="width:1%"></div></div>
+          </div>
+          <div style="margin-top:14px;padding:10px;background:var(--panel-2);border-radius:var(--r);font-size:11px;color:var(--silver);line-height:1.8;">
+            <span style="color:var(--white)">Rule:</span> Keep all Reels under 15s<br>
+            Avg retention on 13–17s clips = <span style="color:var(--green)">76%</span><br>
+            Hook must land within first <span style="color:var(--gold)">2 seconds</span>
+          </div>
+        </div>
+      </div>
+      <div class="panel-card">
+        <div class="panel-head"><div class="panel-title">Best posting time (views & revenue)</div></div>
+        <div class="panel-body">
+          <table class="data-table">
+            <thead><tr><th>Hour</th><th>Posts</th><th>Avg views</th><th>Avg revenue</th></tr></thead>
+            <tbody>
+              <tr><td class="td-title">14:00 ★</td><td class="mono">2</td><td class="mono" style="color:var(--gold)">1,564K</td><td class="mono" style="color:var(--green)">$18.20</td></tr>
+              <tr><td class="td-title">02:00</td><td class="mono">4</td><td class="mono" style="color:var(--gold)">859K</td><td class="mono" style="color:var(--green)">$17.43</td></tr>
+              <tr><td class="td-title">12:00</td><td class="mono">4</td><td class="mono">440K</td><td class="mono">$3.46</td></tr>
+              <tr><td class="td-title">13:00</td><td class="mono">9</td><td class="mono">396K</td><td class="mono">$2.89</td></tr>
+              <tr><td class="td-title">Other hours</td><td class="mono">29</td><td class="mono" style="color:var(--muted)">&lt;210K</td><td class="mono" style="color:var(--muted)">&lt;$1.50</td></tr>
+            </tbody>
+          </table>
+          <div style="margin-top:10px;padding:10px;background:var(--panel-2);border-radius:var(--r);font-size:11px;">
+            <div style="font-size:9px;letter-spacing:.3em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Best day of week</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px;color:var(--silver);">
+              <span style="color:var(--gold)">Friday: 1,263K avg</span>
+              <span>Thursday: 887K</span>
+              <span>Saturday: 865K</span>
+              <span>Wednesday: 820K</span>
+              <span style="color:var(--red)">Sunday: 768K ↓</span>
+              <span style="color:var(--red)">Tuesday: 775K ↓</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── AUDIENCE ─────────────────────────── -->
+<div id="page-audience" class="page">
+  <div class="page-header">
+    <div><div class="page-title">Audience <span>Intelligence</span></div><div class="page-subtitle">Demographics · Geography · Growth · Retention — Mar 2026</div></div>
+  </div>
+  <div class="page-body">
+    <div class="kpi-strip kpi-4">
+      <div class="kpi-card"><div class="kpi-label">Total viewers (28d)</div><div class="kpi-value">10.7M</div><div class="kpi-sub">Cumulative unique</div></div>
+      <div class="kpi-card"><div class="kpi-label">New followers</div><div class="kpi-value green">+19,920</div><div class="kpi-sub">711/day avg</div></div>
+      <div class="kpi-card"><div class="kpi-label">Interactions</div><div class="kpi-value">135,856</div><div class="kpi-sub">4,852/day avg</div></div>
+      <div class="kpi-card"><div class="kpi-label">Page visits</div><div class="kpi-value">73,294</div><div class="kpi-sub">2,618/day avg</div></div>
+    </div>
+
+    <div class="section-row cols-2">
+      <div class="panel-card">
+        <div class="panel-head"><div class="panel-title">Age & Gender breakdown</div><span class="badge b-mid">Facebook · Mar 2026</span></div>
+        <div class="panel-body">
+          <div style="font-size:9px;letter-spacing:.3em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Women (73% of audience)</div>
+          <div class="geo-bar"><div class="geo-lbl">Women 25–34</div><div class="geo-track"><div class="geo-fill" style="width:100%;background:#c084fc"></div></div><div class="geo-val">26.3%</div></div>
+          <div class="geo-bar"><div class="geo-lbl">Women 18–24</div><div class="geo-track"><div class="geo-fill" style="width:74%;background:#c084fc"></div></div><div class="geo-val">19.4%</div></div>
+          <div class="geo-bar"><div class="geo-lbl">Women 35–44</div><div class="geo-track"><div class="geo-fill" style="width:65%;background:#c084fc"></div></div><div class="geo-val">17.1%</div></div>
+          <div class="geo-bar"><div class="geo-lbl">Women 45–54</div><div class="geo-track"><div class="geo-fill" style="width:31%;background:#c084fc"></div></div><div class="geo-val">8.2%</div></div>
+          <div style="margin-top:12px;font-size:9px;letter-spacing:.3em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Men (27% of audience)</div>
+          <div class="geo-bar"><div class="geo-lbl">Men 18–34</div><div class="geo-track"><div class="geo-fill" style="width:51%;background:#93bbf7"></div></div><div class="geo-val">13.4%</div></div>
+          <div class="geo-bar"><div class="geo-lbl">Men 35–44</div><div class="geo-track"><div class="geo-fill" style="width:17%;background:#93bbf7"></div></div><div class="geo-val">4.6%</div></div>
+          <div style="margin-top:12px;padding:8px 10px;background:var(--panel-2);border-radius:var(--r);font-size:11px;color:var(--silver);">
+            <span style="color:var(--gold)">Implication:</span> Bra hacks, dress styling, and female fashion content directly targets 73% of your audience. This is the single biggest untapped revenue lever.
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-card">
+        <div class="panel-head"><div class="panel-title">Top countries — CPM impact</div></div>
+        <div class="panel-body">
+          <div class="geo-bar">
+            <div class="geo-lbl">Philippines</div>
+            <div class="geo-track"><div class="geo-fill" style="width:100%;background:var(--blue)"></div></div>
+            <div class="geo-val">7.9%</div>
+          </div>
+          <div class="geo-bar">
+            <div class="geo-lbl" style="color:var(--green)">United States ★</div>
+            <div class="geo-track"><div class="geo-fill" style="width:81%;background:var(--green)"></div></div>
+            <div class="geo-val" style="color:var(--green)">6.4%</div>
+          </div>
+          <div class="geo-bar"><div class="geo-lbl">Mexico</div><div class="geo-track"><div class="geo-fill" style="width:67%;background:var(--blue)"></div></div><div class="geo-val">5.3%</div></div>
+          <div class="geo-bar"><div class="geo-lbl">Nigeria</div><div class="geo-track"><div class="geo-fill" style="width:53%;background:var(--amber)"></div></div><div class="geo-val">4.2%</div></div>
+          <div class="geo-bar"><div class="geo-lbl">Egypt</div><div class="geo-track"><div class="geo-fill" style="width:49%;background:var(--amber)"></div></div><div class="geo-val">3.9%</div></div>
+          <div class="geo-bar"><div class="geo-lbl">Bangladesh</div><div class="geo-track"><div class="geo-fill" style="width:40%;background:var(--amber)"></div></div><div class="geo-val">3.2%</div></div>
+          <div class="geo-bar"><div class="geo-lbl">India</div><div class="geo-track"><div class="geo-fill" style="width:39%;background:var(--amber)"></div></div><div class="geo-val">3.1%</div></div>
+          <div class="geo-bar"><div class="geo-lbl">Morocco / Algeria</div><div class="geo-track"><div class="geo-fill" style="width:37%;background:var(--amber)"></div></div><div class="geo-val">~2.4%</div></div>
+          <div style="margin-top:12px;padding:8px 10px;background:rgba(82,201,122,.08);border-radius:var(--r);border:1px solid rgba(82,201,122,.2);font-size:11px;color:var(--silver);">
+            <span style="color:var(--green)">US CPM = $0.05–0.15/1K vs Philippines $0.001–0.003.</span> Growing US from 6.4% → 12% would <span style="color:var(--green)">double monthly revenue</span> with zero extra posts.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <div class="panel-head"><div class="panel-title">Daily followers gained — Feb 28 · Mar 27</div><span class="badge b-green">+19,920 total</span></div>
+      <div class="panel-body">
+        <div class="rev-bars" style="height:56px;gap:3px;">
+          <div class="rev-bar" style="height:47%;background:var(--teal)" data-tip="Feb 28: 517"></div>
+          <div class="rev-bar" style="height:68%;background:var(--teal)" data-tip="Mar 01: 753"></div>
+          <div class="rev-bar" style="height:81%;background:var(--teal)" data-tip="Mar 02: 895"></div>
+          <div class="rev-bar" style="height:85%;background:var(--teal)" data-tip="Mar 03: 945"></div>
+          <div class="rev-bar" style="height:81%;background:var(--teal)" data-tip="Mar 04: 896"></div>
+          <div class="rev-bar" style="height:53%;background:var(--teal)" data-tip="Mar 05: 589"></div>
+          <div class="rev-bar" style="height:87%;background:var(--teal)" data-tip="Mar 06: 967"></div>
+          <div class="rev-bar" style="height:69%;background:var(--teal)" data-tip="Mar 07: 767"></div>
+          <div class="rev-bar" style="height:79%;background:var(--teal)" data-tip="Mar 08: 881"></div>
+          <div class="rev-bar" style="height:70%;background:var(--teal)" data-tip="Mar 09: 781"></div>
+          <div class="rev-bar" style="height:50%;background:var(--teal)" data-tip="Mar 10: 560"></div>
+          <div class="rev-bar" style="height:50%;background:var(--teal)" data-tip="Mar 11: 556"></div>
+          <div class="rev-bar" style="height:54%;background:var(--teal)" data-tip="Mar 12: 595"></div>
+          <div class="rev-bar" style="height:85%;background:var(--gold)" data-tip="Mar 13: 945 — spike day"></div>
+          <div class="rev-bar" style="height:73%;background:var(--teal)" data-tip="Mar 14: 806"></div>
+          <div class="rev-bar" style="height:58%;background:var(--teal)" data-tip="Mar 15: 647"></div>
+          <div class="rev-bar" style="height:74%;background:var(--teal)" data-tip="Mar 16: 819"></div>
+          <div class="rev-bar" style="height:49%;background:var(--teal)" data-tip="Mar 17: 542"></div>
+          <div class="rev-bar" style="height:47%;background:var(--teal)" data-tip="Mar 18: 521"></div>
+          <div class="rev-bar" style="height:52%;background:var(--teal)" data-tip="Mar 19: 579"></div>
+          <div class="rev-bar" style="height:51%;background:var(--teal)" data-tip="Mar 20: 565"></div>
+          <div class="rev-bar" style="height:60%;background:var(--teal)" data-tip="Mar 21: 664"></div>
+          <div class="rev-bar" style="height:45%;background:var(--teal)" data-tip="Mar 22: 504"></div>
+          <div class="rev-bar" style="height:44%;background:var(--teal)" data-tip="Mar 23: 489"></div>
+          <div class="rev-bar" style="height:54%;background:var(--teal)" data-tip="Mar 24: 599"></div>
+          <div class="rev-bar" style="height:60%;background:var(--teal)" data-tip="Mar 25: 672"></div>
+          <div class="rev-bar" style="height:100%;background:var(--green)" data-tip="Mar 26: 1,110 — peak"></div>
+          <div class="rev-bar" style="height:68%;background:var(--teal)" data-tip="Mar 27: 756"></div>
+        </div>
+        <div style="font-size:9px;color:var(--muted);margin-top:5px;font-family:'DM Mono',monospace;">Peak: Mar 26 = 1,110 · Avg: 711/day · Total: 19,920 new followers</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── DELIVERABLES ─────────────────────────── -->
+<div id="page-deliverables" class="page">
+  <div class="page-header">
+    <div><div class="page-title">Proof of Work & <span>Deliverables</span></div><div class="page-subtitle">Reports, files and validated outputs from all freelancers</div></div>
+    <div class="header-actions"><button class="btn btn-gold" onclick="openModal('deliverable')">+ Upload Deliverable</button></div>
+  </div>
+  <div class="page-body">
+    <div class="tabs">
+      <div class="tab active" onclick="setTab(this)">All</div>
+      <div class="tab" onclick="setTab(this)">Fahim</div>
+      <div class="tab" onclick="setTab(this)">Naeem</div>
+      <div class="tab" onclick="setTab(this)">Pending review</div>
+    </div>
+    <div class="del-item">
+      <div class="del-icon" style="background:var(--blue-dim)">📊</div>
+      <div class="del-info"><div class="del-name">SEO Audit Report — Week 12</div><div class="del-meta">Fahim · Mar 22, 2026 · PDF · 2.4 MB · <span style="color:var(--green)">✓ Approved</span></div></div>
+      <div class="del-actions"><button class="btn btn-ghost" style="font-size:10px;padding:5px 10px;">View</button></div>
+    </div>
+    <div class="del-item">
+      <div class="del-icon" style="background:var(--teal-dim)">📈</div>
+      <div class="del-info"><div class="del-name">Weekly Engagement Report — Week 12</div><div class="del-meta">Naeem · Mar 22, 2026 · <span style="color:var(--amber)">⏳ In Review</span></div></div>
+      <div class="del-actions"><button class="btn btn-gold" style="font-size:10px;padding:5px 10px;">✓ Approve</button><button class="btn btn-ghost" style="font-size:10px;padding:5px 10px;">Reject</button></div>
+    </div>
+    <div class="del-item">
+      <div class="del-icon" style="background:var(--amber-dim)">🎬</div>
+      <div class="del-info"><div class="del-name">Reel Batch — Fashion Hacks × 12 (Week 12)</div><div class="del-meta">Fahim · Mar 22, 2026 · Google Drive · <span style="color:var(--green)">✓ Approved</span></div></div>
+      <div class="del-actions"><button class="btn btn-ghost" style="font-size:10px;padding:5px 10px;">View</button></div>
+    </div>
+    <div class="del-item">
+      <div class="del-icon" style="background:var(--teal-dim)">🎬</div>
+      <div class="del-info"><div class="del-name">Bra Hacks Reel × 3 (Week 11–12)</div><div class="del-meta">Fahim · Mar 15, 2026 · <span style="color:var(--green)">✓ Published · $27.77 earned</span></div></div>
+      <div class="del-actions"><button class="btn btn-ghost" style="font-size:10px;padding:5px 10px;">View stats</button></div>
+    </div>
+    <div class="del-item">
+      <div class="del-icon" style="background:var(--red-dim)">📋</div>
+      <div class="del-info"><div class="del-name">Monthly Trend Research — March 2026</div><div class="del-meta">Naeem · Due Mar 31, 2026 · <span style="color:var(--red)">⚠ Not submitted</span></div></div>
+      <div class="del-actions"><button class="btn btn-ghost" style="font-size:10px;padding:5px 10px;">Send reminder</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── REPORTING ─────────────────────────── -->
+<div id="page-reporting" class="page">
+  <div class="page-header">
+    <div><div class="page-title">Weekly & Monthly <span>Reports</span></div><div class="page-subtitle">Submitted reports · Performance logs · Audit trail</div></div>
+    <div class="header-actions"><button class="btn btn-gold" onclick="openModal('report')">+ Submit Report</button></div>
+  </div>
+  <div class="page-body">
+    <div class="alert-card warn">
+      <span class="alert-icon">◉</span>
+      <div><div class="alert-title">W13 Reports Pending — due Mar 29</div>
+      <div class="alert-text">Naeem weekly report (views, revenue, engagement, comment rate) + Fahim SEO audit both due Friday Mar 29 before 18:00.</div></div>
+    </div>
+
+    <div id="reports-list">
+
+    <div class="report-week">
+      <div class="report-head" onclick="toggleReport(this)">
+        <div><div class="report-title">Week 12 — Mar 17–22, 2026</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">Fahim ✓ · Naeem ✓ · Both submitted on time</div></div>
+        <span style="color:var(--green);font-size:11px;">▼ Expand</span>
+      </div>
+      <div class="report-body open">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div>
+            <div style="font-size:10px;letter-spacing:.3em;color:var(--blue);text-transform:uppercase;margin-bottom:10px;">Fahim — Content & SEO</div>
+            <div class="rm-row"><span class="rm-name">FB Reels posted</span><div class="rm-vals"><span class="rm-val target">Target: 21</span><span class="rm-val actual">12</span><span class="badge b-red">57%</span></div></div>
+            <div class="rm-row"><span class="rm-name">YT Shorts</span><div class="rm-vals"><span class="rm-val target">Target: 14</span><span class="rm-val actual">8</span><span class="badge b-amber">57%</span></div></div>
+            <div class="rm-row"><span class="rm-name">IG Reels</span><div class="rm-vals"><span class="rm-val target">Target: 4</span><span class="rm-val actual">4</span><span class="badge b-green">100%</span></div></div>
+            <div class="rm-row"><span class="rm-name">Brand compliance</span><div class="rm-vals"><span class="rm-val actual">88%</span><span class="badge b-amber">Near target</span></div></div>
+            <div class="rm-row"><span class="rm-name">SEO report submitted</span><div class="rm-vals"><span class="rm-val actual">✓ On time</span><span class="badge b-green">Done</span></div></div>
+          </div>
+          <div>
+            <div style="font-size:10px;letter-spacing:.3em;color:var(--teal);text-transform:uppercase;margin-bottom:10px;">Naeem — Growth & Community</div>
+            <div class="rm-row"><span class="rm-name">FB Revenue (week)</span><div class="rm-vals"><span class="rm-val target">~$67 needed</span><span class="rm-val actual">$12.10</span><span class="badge b-red">18%</span></div></div>
+            <div class="rm-row"><span class="rm-name">FB Daily views</span><div class="rm-vals"><span class="rm-val target">1.9M needed</span><span class="rm-val actual">739K avg</span><span class="badge b-amber">39%</span></div></div>
+            <div class="rm-row"><span class="rm-name">Comment response</span><div class="rm-vals"><span class="rm-val target">≥80%</span><span class="rm-val actual">65%</span><span class="badge b-amber">Below</span></div></div>
+            <div class="rm-row"><span class="rm-name">New followers</span><div class="rm-vals"><span class="rm-val actual">3,571</span><span class="badge b-green">Strong</span></div></div>
+            <div class="rm-row"><span class="rm-name">Trend insight</span><div class="rm-vals"><span class="rm-val actual">Submitted</span><span class="badge b-green">Done</span></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="report-week">
+      <div class="report-head" onclick="toggleReport(this)">
+        <div><div class="report-title">Week 11 — Mar 10–16, 2026</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">Fahim ✓ · Naeem ⚠ 2 days late</div></div>
+        <span style="color:var(--muted);font-size:11px;">▶ Expand</span>
+      </div>
+      <div class="report-body"></div>
+    </div>
+
+    <div class="report-week">
+      <div class="report-head" onclick="toggleReport(this)">
+        <div><div class="report-title">Week 10 — Mar 3–9, 2026</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">Fahim ✓ · Naeem ✓</div></div>
+        <span style="color:var(--muted);font-size:11px;">▶ Expand</span>
+      </div>
+      <div class="report-body"></div>
+    </div>
+
+    </div><!-- end #reports-list -->
+  </div>
+</div>
+</div>
+
+<!-- ════ MODALS ════ -->
+<div class="modal-overlay" id="modal-task">
+  <div class="modal">
+    <div class="modal-title">New Task</div>
+    <div class="modal-sub">Assign a mission to a freelancer — saved directly to Airtable</div>
+    <div class="form-group"><label class="form-label">Task Title</label><input id="task-title" class="form-input" placeholder="e.g. Spring Collection Drop Reel"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Assign to</label>
+        <select id="task-assignee" class="form-select">
+          <option>Fahim</option>
+          <option>Naeem</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Content Type</label>
+        <select id="task-content-type" class="form-select">
+          <option>New Collection Reel — ~$70 avg</option>
+          <option>Millennial vs Gen-Z — ~$8.82 avg</option>
+          <option>Bra Hacks — ~$6.96 avg</option>
+          <option>Fashion Hacks — ~$2.77 avg</option>
+          <option>SEO Report</option>
+          <option>Weekly Report</option>
+          <option>YouTube Long-form</option>
+          <option>Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Platform</label>
+        <select id="task-platform" class="form-select">
+          <option>Facebook Reel</option>
+          <option>Instagram Reel</option>
+          <option>TikTok</option>
+          <option>YouTube Shorts</option>
+          <option>YouTube Long-form</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Due Date</label>
+        <input id="task-due" class="form-input" type="date">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Priority</label>
+        <select id="task-priority" class="form-select">
+          <option>Critical</option>
+          <option>High</option>
+          <option>Normal</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Expected Revenue ($)</label>
+        <input id="task-revenue" class="form-input" type="number" placeholder="e.g. 70">
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Brief / Notes</label>
+      <textarea id="task-notes" class="form-textarea" placeholder="Duration target, hook instructions, key message…"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('task')">Cancel</button>
+      <button id="btn-create-task" class="btn btn-gold" onclick="submitTask()">Create Task →</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-report">
+  <div class="modal">
+    <div class="modal-title">Submit Weekly Report</div>
+    <div class="modal-sub">Freelancer weekly performance — saved directly to Airtable</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Submitted by</label>
+        <select id="report-freelancer" class="form-select"><option>Fahim</option><option>Naeem</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Week / Period</label>
+        <input id="report-week" class="form-input" placeholder="W13 · Mar 24–29, 2026">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">FB Reels Posted</label>
+        <input id="report-fb-reels" class="form-input" type="number" placeholder="0">
+      </div>
+      <div class="form-group"><label class="form-label">YT Shorts</label>
+        <input id="report-yt-shorts" class="form-input" type="number" placeholder="0">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">IG Reels</label>
+        <input id="report-ig-reels" class="form-input" type="number" placeholder="0">
+      </div>
+      <div class="form-group"><label class="form-label">Revenue USD</label>
+        <input id="report-revenue" class="form-input" type="number" step="0.01" placeholder="0.00">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Total Views</label>
+        <input id="report-views" class="form-input" type="number" placeholder="e.g. 5000000">
+      </div>
+      <div class="form-group"><label class="form-label">Comment Response Rate (%)</label>
+        <input id="report-comment-rate" class="form-input" type="number" placeholder="65">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Brand Compliance (%)</label>
+        <input id="report-compliance" class="form-input" type="number" placeholder="88">
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Notes / Trend insight</label>
+      <textarea id="report-notes" class="form-textarea" placeholder="Top posts, observations, recommendations…"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('report')">Cancel</button>
+      <button id="btn-submit-report" class="btn btn-gold" onclick="submitReport()">Submit Report →</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-deliverable">
+  <div class="modal">
+    <div class="modal-title">Upload Deliverable</div>
+    <div class="modal-sub">Attach proof of work — saved directly to Airtable</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Freelancer</label>
+        <select id="del-freelancer" class="form-select"><option>Fahim</option><option>Naeem</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Type</label>
+        <select id="del-type" class="form-select">
+          <option>Reel batch (Drive link)</option>
+          <option>SEO Audit (PDF)</option>
+          <option>Weekly report</option>
+          <option>Published post link</option>
+          <option>Monthly report</option>
+          <option>Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Name / Title</label>
+      <input id="del-name" class="form-input" placeholder="e.g. Bra Hacks batch × 3 — W13">
+    </div>
+    <div class="form-group"><label class="form-label">File or Link (Google Drive, URL…)</label>
+      <input id="del-link" class="form-input" placeholder="https://drive.google.com/...">
+    </div>
+    <div class="form-group"><label class="form-label">Notes</label>
+      <textarea id="del-notes" class="form-textarea" placeholder="Brief description…"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('deliverable')">Cancel</button>
+      <button id="btn-upload-del" class="btn btn-gold" onclick="submitDeliverable()">Upload →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════
+//  FREDJO OS — AIRTABLE CONFIG
+//  Base: FredJo OS · appd3q1hbGkAIus8B
+// ════════════════════════════════════════════════════════
+const AT = {
+  token: 'patlyjEhZSdHUwUf0.155c33a6ce8f66c3e273cdd164f364bea55311a95e6f11681fd3355ed7d701fb',
+  base:  'appd3q1hbGkAIus8B',
+  tables: {
+    tasks:        'tblutUDacsam4jltU',   // Tasks
+    reports:      'tblZLuQAmal7IzGn5',   // Weekly Reports
+    deliverables: 'tblAXS1pMoStsyX1G',   // Deliverables
+    kpis:         'tblMgCgnzkx5r0Gbc',   // KPI Targets
+  }
+};
+
+// ── API helpers ───────────────────────────────────────────
+const atUrl  = (tbl, id='') => `https://api.airtable.com/v0/${AT.base}/${AT.tables[tbl]}${id?'/'+id:''}`;
+const atHdr  = { 'Authorization':`Bearer ${AT.token}`, 'Content-Type':'application/json' };
+
+async function atGet(tbl, params='') {
+  try {
+    const r = await fetch(atUrl(tbl) + (params ? '?'+params : ''), { headers: atHdr });
+    if (!r.ok) throw new Error(r.status);
+    return (await r.json()).records || [];
+  } catch(e) { console.warn('GET', tbl, e.message); return []; }
+}
+
+async function atPost(tbl, records, typecast=true) {
+  const r = await fetch(atUrl(tbl), {
+    method:'POST', headers: atHdr,
+    body: JSON.stringify({ records: records.map(f=>({fields:f})), typecast })
+  });
+  if (!r.ok) { const e=await r.json(); throw new Error(e.error?.message||r.status); }
+  return r.json();
+}
+
+async function atPatch(tbl, id, fields) {
+  const r = await fetch(atUrl(tbl, id), {
+    method:'PATCH', headers: atHdr,
+    body: JSON.stringify({ fields })
+  });
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+
+async function atDelete(tbl, id) {
+  await fetch(atUrl(tbl, id), { method:'DELETE', headers: atHdr });
+}
+
+// ── Toast ─────────────────────────────────────────────────
+function toast(msg, type='success') {
+  let t = document.getElementById('_toast');
+  if (!t) {
+    t = Object.assign(document.createElement('div'), { id:'_toast' });
+    Object.assign(t.style, {
+      position:'fixed', bottom:'80px', left:'50%', transform:'translateX(-50%) translateY(16px)',
+      zIndex:9999, padding:'10px 20px', borderRadius:'8px', fontSize:'12px', fontWeight:600,
+      fontFamily:"'Syne',sans-serif", transition:'all .3s', opacity:0, pointerEvents:'none', whiteSpace:'nowrap'
+    });
+    document.body.appendChild(t);
+  }
+  const bg = { success:'#52c97a', error:'#e05252', info:'#4a9eff', loading:'#555' };
+  const fg = { success:'#000', error:'#fff', info:'#fff', loading:'#fff' };
+  Object.assign(t.style, { background: bg[type]||bg.info, color: fg[type]||fg.info, opacity:1, transform:'translateX(-50%) translateY(0)' });
+  t.textContent = msg;
+  if (type !== 'loading') setTimeout(()=>{ t.style.opacity=0; t.style.transform='translateX(-50%) translateY(16px)'; }, 3000);
+}
+
+// ════════════════════════════════════════════════════════
+//  TABLE 1 — TASKS
+// ════════════════════════════════════════════════════════
+const TASK_SEED = [
+  { Name:'Spring Collection Drop Reel', Assignee:'Fahim', Type:'New Collection Reel', Platform:'Facebook', Status:'To Do', Priority:'Critical', 'Expected Revenue':70, Notes:'Under 15s. Hook first 2s. Product reveal + WELCOME20. Publish Friday 14:00.' },
+  { Name:'Millennial vs Gen-Z batch × 4', Assignee:'Fahim', Type:'Millennial vs Gen-Z', Platform:'Facebook', Status:'To Do', Priority:'Critical', 'Expected Revenue':35, Notes:'13s exact. Poll format. Friday 14:00. $8.82/post avg expected.' },
+  { Name:'Bra Hacks batch × 3', Assignee:'Fahim', Type:'Bra Hacks', Platform:'Facebook', Status:'To Do', Priority:'High', 'Expected Revenue':21, Notes:'Highest retention (12.6s). 3–4 posts this week. $6.96/post avg.' },
+  { Name:'Stop all photo posts immediately', Assignee:'Fahim', Type:'Other', Platform:'Facebook', Status:'To Do', Priority:'Critical', 'Expected Revenue':0, Notes:'Photos = $0.02/post. All production time → video under 15s.' },
+  { Name:'Weekly Report W13', Assignee:'Naeem', Type:'Weekly Report', Platform:'All', Status:'To Do', Priority:'High', 'Expected Revenue':0, Notes:'Due Friday Mar 29 before 18:00. Views, revenue, comment rate, trend insight.' },
+  { Name:'US Audience targeting test', Assignee:'Naeem', Type:'Strategy', Platform:'Facebook', Status:'In Progress', Priority:'High', 'Expected Revenue':0, Notes:'US captions, post 14:00 UTC-5, US hashtags. Goal: 6.4% → 12% US share = 2× revenue.' },
+];
+
+let tasksCache = [];
+
+async function loadTasks() {
+  tasksCache = await atGet('tasks', 'sort%5B0%5D%5Bfield%5D=Priority&sort%5B0%5D%5Bdirection%5D=asc');
+  renderKanban(tasksCache);
+}
+
+function renderKanban(records) {
+  const cols = {
+    'To Do':       document.getElementById('col-todo'),
+    'In Progress': document.getElementById('col-inprogress'),
+    'In Review':   document.getElementById('col-review'),
+    'Done':        document.getElementById('col-done'),
+  };
+  if (!records.length) return;
+  Object.values(cols).forEach(c => { if (c) c.innerHTML = ''; });
+  const counts = {'To Do':0,'In Progress':0,'In Review':0,'Done':0};
+  records.forEach(rec => {
+    const f = rec.fields;
+    const status = f.Status || 'To Do';
+    const col = cols[status]; if (!col) return;
+    counts[status]++;
+    const prioColor = (f.Priority||'').includes('Critical') ? 'var(--red)' :
+                      (f.Priority||'').includes('High')     ? 'var(--amber)' : 'var(--muted)';
+    const ppMap = { Facebook:'pp-fb', Instagram:'pp-ig', TikTok:'pp-tt', YouTube:'pp-yt', All:'pp-fb' };
+    const ppClass = ppMap[f.Platform] || '';
+    const card = document.createElement('div');
+    card.className = 'kanban-card';
+    if (status==='In Progress') card.style.borderColor='rgba(74,158,255,.25)';
+    if (status==='In Review')   card.style.borderColor='rgba(224,154,58,.25)';
+    card.innerHTML = `
+      <div class="kc-title">${f.Name||f.Title||'Untitled'}</div>
+      <div class="kc-meta" style="margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        ${ppClass?`<span class="pp ${ppClass}">${f.Platform||''}</span>`:''}
+        <span style="font-size:9px;padding:2px 6px;border-radius:3px;background:${prioColor}22;color:${prioColor};font-weight:600;">${f.Priority||''}</span>
+        ${f.Assignee?`<span style="font-size:9px;color:var(--muted);margin-left:auto;">${f.Assignee}</span>`:''}
+      </div>
+      ${f['Expected Revenue']?`<div style="font-size:9px;color:var(--green);margin-top:5px;font-family:'DM Mono',monospace;">~$${f['Expected Revenue']} expected</div>`:''}
+      ${f.Notes?`<div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5;">${f.Notes.substring(0,90)}${f.Notes.length>90?'…':''}</div>`:''}
+      <div style="margin-top:10px;display:flex;gap:5px;">
+        <button onclick="moveTask('${rec.id}','${status}')" class="btn btn-ghost" style="font-size:9px;padding:3px 8px;flex:1;">Move →</button>
+        <button onclick="deleteTask('${rec.id}')" class="btn btn-ghost" style="font-size:9px;padding:3px 8px;color:var(--red);">✕</button>
+      </div>`;
+    col.appendChild(card);
+  });
+  const idMap = {'To Do':'cnt-todo','In Progress':'cnt-inprogress','In Review':'cnt-review','Done':'cnt-done'};
+  Object.entries(counts).forEach(([s,n])=>{ const el=document.getElementById(idMap[s]); if(el) el.textContent=n||0; });
+}
+
+async function submitTask() {
+  const btn = document.getElementById('btn-create-task');
+  const name = document.getElementById('task-title').value.trim();
+  if (!name) { toast('Title is required','error'); return; }
+  const fields = {
+    Name:              name,
+    Assignee:          document.getElementById('task-assignee').value,
+    Type:              document.getElementById('task-content-type').value,
+    Platform:          document.getElementById('task-platform').value,
+    Priority:          document.getElementById('task-priority').value,
+    Status:            'To Do',
+    'Expected Revenue': parseFloat(document.getElementById('task-revenue').value)||0,
+    Notes:             document.getElementById('task-notes').value,
+  };
+  if (document.getElementById('task-due').value)
+    fields['Due Date'] = document.getElementById('task-due').value;
+  btn.textContent='Saving…'; btn.disabled=true;
+  try {
+    await atPost('tasks',[fields]);
+    toast('✓ Task saved to Airtable');
+    closeModal('task');
+    document.getElementById('task-title').value='';
+    document.getElementById('task-notes').value='';
+    await loadTasks();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+  finally { btn.textContent='Create Task →'; btn.disabled=false; }
+}
+
+async function moveTask(id, current) {
+  const order = ['To Do','In Progress','In Review','Done'];
+  const next = order[(order.indexOf(current)+1)%order.length];
+  toast('Moving to '+next+'…','loading');
+  try { await atPatch('tasks',id,{Status:next}); toast('✓ '+next); await loadTasks(); }
+  catch(e) { toast('Error','error'); }
+}
+
+async function deleteTask(id) {
+  if (!confirm('Delete this task?')) return;
+  try { await atDelete('tasks',id); toast('✓ Deleted'); await loadTasks(); }
+  catch(e) { toast('Error','error'); }
+}
+
+// ════════════════════════════════════════════════════════
+//  TABLE 2 — WEEKLY REPORTS
+// ════════════════════════════════════════════════════════
+let reportsCache = [];
+
+async function loadReports() {
+  reportsCache = await atGet('reports', 'sort%5B0%5D%5Bfield%5D=Week&sort%5B0%5D%5Bdirection%5D=desc');
+  if (reportsCache.length > 0) renderReports(reportsCache);
+}
+
+function renderReports(records) {
+  const container = document.getElementById('reports-list');
+  if (!container || !records.length) return;
+  container.innerHTML = '';
+  records.forEach(rec => {
+    const f = rec.fields;
+    const rev = (f['Revenue USD']||0).toFixed(2);
+    const views = ((f.Views||0)/1e6).toFixed(1);
+    const div = document.createElement('div');
+    div.className = 'report-week';
+    div.innerHTML = `
+      <div class="report-head" onclick="toggleReport(this)">
+        <div>
+          <div class="report-title">${f.Week||'Week'} — ${f.Freelancer||''}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px;">
+            FB Reels: ${f['FB Reels Posted']||0} · Revenue: $${rev} · Views: ${views}M · Compliance: ${f['Brand Compliance']||0}%
+          </div>
+        </div>
+        <span style="color:var(--muted);font-size:11px;">▶ Expand</span>
+      </div>
+      <div class="report-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div>
+            <div style="font-size:10px;letter-spacing:.3em;color:var(--teal);text-transform:uppercase;margin-bottom:10px;">${f.Freelancer||''} — Production</div>
+            <div class="rm-row"><span class="rm-name">FB Reels</span><span class="rm-val actual">${f['FB Reels Posted']||0}</span></div>
+            <div class="rm-row"><span class="rm-name">YT Shorts</span><span class="rm-val actual">${f['YT Shorts']||0}</span></div>
+            <div class="rm-row"><span class="rm-name">IG Reels</span><span class="rm-val actual">${f['IG Reels']||0}</span></div>
+            <div class="rm-row"><span class="rm-name">Revenue USD</span><span class="rm-val actual" style="color:var(--gold);">$${rev}</span></div>
+            <div class="rm-row"><span class="rm-name">Views</span><span class="rm-val actual">${views}M</span></div>
+            <div class="rm-row"><span class="rm-name">Comment Rate</span><span class="rm-val actual">${f['Comment Rate']||0}%</span></div>
+            <div class="rm-row"><span class="rm-name">Brand Compliance</span><span class="rm-val actual">${f['Brand Compliance']||0}%</span></div>
+          </div>
+          <div>
+            <div style="font-size:10px;letter-spacing:.3em;color:var(--silver);text-transform:uppercase;margin-bottom:10px;">Insights</div>
+            <div style="font-size:11px;color:var(--silver);line-height:1.7;">${f.Notes||'—'}</div>
+          </div>
+        </div>
+      </div>`;
+    container.appendChild(div);
+  });
+}
+
+async function submitReport() {
+  const btn = document.getElementById('btn-submit-report');
+  const week = document.getElementById('report-week').value;
+  if (!week) { toast('Week is required','error'); return; }
+  const fields = {
+    Week:              week,
+    Freelancer:        document.getElementById('report-freelancer').value,
+    'FB Reels Posted': parseInt(document.getElementById('report-fb-reels').value)||0,
+    'YT Shorts':       parseInt(document.getElementById('report-yt-shorts').value)||0,
+    'IG Reels':        parseInt(document.getElementById('report-ig-reels').value)||0,
+    'Revenue USD':     parseFloat(document.getElementById('report-revenue').value)||0,
+    Views:             parseFloat(document.getElementById('report-views').value)||0,
+    'Comment Rate':    parseFloat(document.getElementById('report-comment-rate').value)||0,
+    'Brand Compliance':parseFloat(document.getElementById('report-compliance').value)||0,
+    Notes:             document.getElementById('report-notes').value,
+  };
+  btn.textContent='Saving…'; btn.disabled=true;
+  try {
+    await atPost('reports',[fields]);
+    toast('✓ Report saved to Airtable');
+    closeModal('report');
+    await loadReports();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+  finally { btn.textContent='Submit Report →'; btn.disabled=false; }
+}
+
+// ════════════════════════════════════════════════════════
+//  TABLE 3 — DELIVERABLES
+// ════════════════════════════════════════════════════════
+async function submitDeliverable() {
+  const btn = document.getElementById('btn-upload-del');
+  const name = document.getElementById('del-name').value.trim();
+  if (!name) { toast('Name is required','error'); return; }
+  const fields = {
+    Name:       name,
+    Freelancer: document.getElementById('del-freelancer').value,
+    Type:       document.getElementById('del-type').value,
+    Link:       document.getElementById('del-link').value,
+    Status:     'Pending Review',
+    Notes:      document.getElementById('del-notes').value,
+  };
+  btn.textContent='Saving…'; btn.disabled=true;
+  try {
+    await atPost('deliverables',[fields]);
+    toast('✓ Deliverable saved to Airtable');
+    closeModal('deliverable');
+    document.getElementById('del-name').value='';
+    document.getElementById('del-link').value='';
+    document.getElementById('del-notes').value='';
+  } catch(e) { toast('Error: '+e.message,'error'); }
+  finally { btn.textContent='Upload →'; btn.disabled=false; }
+}
+
+// ════════════════════════════════════════════════════════
+//  TABLE 4 — KPI TARGETS
+// ════════════════════════════════════════════════════════
+const KPI_SEED = [
+  // Facebook
+  { Metric:'Monthly Revenue', Platform:'Facebook', Unit:'USD', Baseline:138, 'Current Value':369.51, 'Target Q1 2026':2000, Period:'Monthly', Status:'Off track', Owner:'Naeem', 'Data Source':'Meta Business Suite' },
+  { Metric:'Monthly Views',   Platform:'Facebook', Unit:'Views', Baseline:40000000, 'Current Value':24700000, 'Target Q1 2026':70000000, Period:'Monthly', Status:'At risk', Owner:'Naeem', 'Data Source':'Meta Business Suite' },
+  { Metric:'Viral Reels',     Platform:'Facebook', Unit:'Count', Baseline:0, 'Current Value':1, 'Target Q1 2026':4, Period:'Monthly', Status:'At risk', Owner:'Naeem', 'Data Source':'Meta Business Suite' },
+  { Metric:'New Followers',   Platform:'Facebook', Unit:'Followers', Baseline:550000, 'Current Value':555000, 'Target Q1 2026':800000, Period:'Monthly', Status:'At risk', Owner:'Naeem', 'Data Source':'Meta Business Suite' },
+  { Metric:'Comment Response Rate', Platform:'Facebook', Unit:'%', Baseline:0, 'Current Value':65, 'Target Q1 2026':80, Period:'Monthly', Status:'At risk', Owner:'Naeem', 'Data Source':'Meta Business Suite' },
+  // Instagram
+  { Metric:'Followers', Platform:'Instagram', Unit:'Followers', Baseline:17300, 'Current Value':18000, 'Target Q1 2026':50000, Period:'Monthly', Status:'At risk', Owner:'Fahim', 'Data Source':'Meta Business Suite' },
+  { Metric:'Reels per week', Platform:'Instagram', Unit:'Count', Baseline:0, 'Current Value':4, 'Target Q1 2026':5, Period:'Weekly', Status:'On track', Owner:'Fahim', 'Data Source':'Meta Business Suite' },
+  // YouTube
+  { Metric:'Subscribers', Platform:'YouTube', Unit:'Followers', Baseline:2353, 'Current Value':2500, 'Target Q1 2026':15000, Period:'Monthly', Status:'Off track', Owner:'Fahim', 'Data Source':'YouTube Studio' },
+  { Metric:'Watch Time',  Platform:'YouTube', Unit:'Minutes', Baseline:28860, 'Current Value':37200, 'Target Q1 2026':120000, Period:'Monthly', Status:'At risk', Owner:'Fahim', 'Data Source':'YouTube Studio' },
+  { Metric:'Monthly Revenue', Platform:'YouTube', Unit:'USD', Baseline:0, 'Current Value':40, 'Target Q1 2026':1000, Period:'Monthly', Status:'Off track', Owner:'Fahim', 'Data Source':'YouTube Studio' },
+  // TikTok
+  { Metric:'Followers', Platform:'TikTok', Unit:'Followers', Baseline:2796, 'Current Value':3200, 'Target Q1 2026':25000, Period:'Monthly', Status:'Off track', Owner:'Fahim', 'Data Source':'TikTok Analytics' },
+  { Metric:'Posts per day', Platform:'TikTok', Unit:'Count', Baseline:0, 'Current Value':0.6, 'Target Q1 2026':1, Period:'Weekly', Status:'At risk', Owner:'Fahim', 'Data Source':'TikTok Analytics' },
+];
+
+async function loadKPIs() {
+  const records = await atGet('kpis');
+  console.log('KPI Targets loaded:', records.length, 'records');
+}
+
+// ════════════════════════════════════════════════════════
+//  SEED — one-time pre-population of all tables
+// ════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
+//  FIELD CREATION — creates missing fields before seeding
+// ════════════════════════════════════════════════════════
+const FIELD_DEFS = {
+  tasks: [
+    { name:'Name',             type:'singleLineText' },
+    { name:'Assignee',         type:'singleLineText' },
+    { name:'Type',             type:'singleLineText' },
+    { name:'Platform',         type:'singleLineText' },
+    { name:'Status',           type:'singleLineText' },
+    { name:'Priority',         type:'singleLineText' },
+    { name:'Expected Revenue', type:'number',   options:{ precision:2 } },
+    { name:'Notes',            type:'multilineText' },
+    { name:'Due Date',         type:'date',     options:{ dateFormat:{ name:'iso' } } },
+  ],
+  kpis: [
+    { name:'Metric',         type:'singleLineText' },
+    { name:'Platform',       type:'singleLineText' },
+    { name:'Unit',           type:'singleLineText' },
+    { name:'Baseline',       type:'number', options:{ precision:2 } },
+    { name:'Current Value',  type:'number', options:{ precision:2 } },
+    { name:'Target Q1 2026', type:'number', options:{ precision:2 } },
+    { name:'Period',         type:'singleLineText' },
+    { name:'Status',         type:'singleLineText' },
+    { name:'Owner',          type:'singleLineText' },
+    { name:'Data Source',    type:'singleLineText' },
+    { name:'Notes',          type:'multilineText' },
+  ],
+  reports: [
+    { name:'Week',              type:'singleLineText' },
+    { name:'Freelancer',        type:'singleLineText' },
+    { name:'FB Reels Posted',   type:'number', options:{ precision:0 } },
+    { name:'YT Shorts',         type:'number', options:{ precision:0 } },
+    { name:'IG Reels',          type:'number', options:{ precision:0 } },
+    { name:'Revenue USD',       type:'number', options:{ precision:2 } },
+    { name:'Views',             type:'number', options:{ precision:0 } },
+    { name:'Comment Rate',      type:'number', options:{ precision:1 } },
+    { name:'Brand Compliance',  type:'number', options:{ precision:1 } },
+    { name:'Notes',             type:'multilineText' },
+  ],
+  deliverables: [
+    { name:'Name',       type:'singleLineText' },
+    { name:'Freelancer', type:'singleLineText' },
+    { name:'Type',       type:'singleLineText' },
+    { name:'Link',       type:'url' },
+    { name:'Status',     type:'singleLineText' },
+    { name:'Week',       type:'singleLineText' },
+    { name:'Notes',      type:'multilineText' },
+  ],
+};
+
+async function createFieldsForTable(tableName, fields) {
+  // First, read existing fields to avoid duplicates
+  const r = await fetch(
+    `https://api.airtable.com/v0/meta/bases/${AT.base}/tables`,
+    { headers: atHdr }
+  );
+  if (!r.ok) throw new Error('Cannot read schema: ' + r.status);
+  const schema = await r.json();
+  const table = schema.tables?.find(t => AT.tables[tableName] === t.id);
+  if (!table) throw new Error('Table not found: ' + tableName);
+
+  const existingNames = new Set(table.fields.map(f => f.name.toLowerCase()));
+  const toCreate = fields.filter(f => !existingNames.has(f.name.toLowerCase()));
+
+  let created = 0;
+  for (const field of toCreate) {
+    try {
+      const cr = await fetch(
+        `https://api.airtable.com/v0/meta/bases/${AT.base}/tables/${AT.tables[tableName]}/fields`,
+        {
+          method: 'POST',
+          headers: atHdr,
+          body: JSON.stringify(field)
+        }
+      );
+      if (cr.ok) created++;
+      else {
+        const e = await cr.json();
+        console.warn(`Field "${field.name}" failed:`, e.error?.message);
+      }
+    } catch(e) { console.warn('Field create error:', e); }
+  }
+  return { total: fields.length, existing: existingNames.size, created };
+}
+
+async function seedDatabase() {
+  const btn = document.getElementById('btn-seed');
+  if (!confirm('Pre-populate Airtable with real FredJo data?\n\nStep 1: Create missing fields in all tables\nStep 2: Insert 12 KPI Targets + 6 Priority Tasks\n\nThis runs once.')) return;
+
+  btn.textContent = 'Creating fields…';
+  btn.disabled = true;
+  toast('Setting up Airtable fields…', 'loading');
+
+  // Step 1 — Create fields in all 4 tables
+  const tableNames = ['tasks', 'kpis', 'reports', 'deliverables'];
+  let fieldErrors = 0;
+  for (const t of tableNames) {
+    try {
+      const res = await createFieldsForTable(t, FIELD_DEFS[t]);
+      console.log(`${t}: ${res.created} fields created, ${res.existing} already existed`);
+    } catch(e) {
+      console.error(`Field setup for ${t} failed:`, e.message);
+      fieldErrors++;
+    }
+  }
+
+  if (fieldErrors === tableNames.length) {
+    // All field creation failed — likely token missing schema scope
+    btn.textContent = 'Retry Seed';
+    btn.disabled = false;
+    toast('⚠ Field creation requires schema scope on token — see instructions below', 'error');
+    showTokenInstructions();
+    return;
+  }
+
+  // Step 2 — Wait a moment for fields to propagate, then seed
+  btn.textContent = 'Inserting records…';
+  await new Promise(r => setTimeout(r, 1500));
+  toast('Inserting records into Airtable…', 'loading');
+
+  let ok = 0, fail = 0;
+
+  // Seed KPI Targets
+  for (let i = 0; i < KPI_SEED.length; i += 10) {
+    try {
+      await atPost('kpis', KPI_SEED.slice(i, i + 10));
+      ok += Math.min(10, KPI_SEED.length - i);
+    } catch(e) { console.error('KPI seed:', e.message); fail += Math.min(10, KPI_SEED.length - i); }
+  }
+
+  // Seed Tasks
+  for (let i = 0; i < TASK_SEED.length; i += 10) {
+    try {
+      await atPost('tasks', TASK_SEED.slice(i, i + 10));
+      ok += Math.min(10, TASK_SEED.length - i);
+    } catch(e) { console.error('Task seed:', e.message); fail += Math.min(10, TASK_SEED.length - i); }
+  }
+
+  btn.disabled = false;
+  if (fail === 0) {
+    toast(`✓ ${ok} records seeded successfully`);
+    btn.style.display = 'none';
+    await loadTasks();
+    await loadKPIs();
+  } else if (ok > 0) {
+    btn.textContent = 'Retry Seed';
+    toast(`${ok} ok · ${fail} failed — fields may need a moment, retry in 5s`, 'error');
+  } else {
+    btn.textContent = 'Retry Seed';
+    toast('All failed — check token scopes (see instructions)', 'error');
+    showTokenInstructions();
+  }
+}
+
+function showTokenInstructions() {
+  const existing = document.getElementById('_token_help');
+  if (existing) { existing.style.display = 'block'; return; }
+  const div = document.createElement('div');
+  div.id = '_token_help';
+  div.style.cssText = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+    background:#1a1a1a;border:1px solid #b8975a;border-radius:10px;padding:24px;
+    width:500px;max-width:90vw;z-index:9999;font-family:'Syne',sans-serif;`;
+  div.innerHTML = `
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:#b8975a;margin-bottom:8px;">Token Scope Missing</div>
+    <div style="font-size:11px;color:#999;margin-bottom:16px;">Your token needs the schema scope to create fields automatically.</div>
+    <div style="font-size:11px;color:#ccc;line-height:2;background:#0f0f0f;padding:12px;border-radius:6px;margin-bottom:16px;">
+      1. Go to <strong style="color:#b8975a">airtable.com/create/tokens</strong><br>
+      2. Edit your <strong>FredJo Cockpit</strong> token<br>
+      3. Add scope: <strong style="color:#52c97a">schema.bases:write</strong><br>
+      4. Save — then click ⚡ Seed Data again
+    </div>
+    <button onclick="this.parentElement.style.display='none'" style="background:#b8975a;color:#000;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-family:'Syne',sans-serif;font-weight:600;font-size:12px;">Got it →</button>
+  `;
+  document.body.appendChild(div);
+}
+
+// ════════════════════════════════════════════════════════
+//  CONNECTION STATUS
+// ════════════════════════════════════════════════════════
+async function checkConnection() {
+  const dot = document.getElementById('at-status-dot');
+  const lbl = document.getElementById('at-status-label');
+  try {
+    const r = await fetch(atUrl('tasks')+'?maxRecords=1', { headers: atHdr });
+    if (r.ok) {
+      dot.style.background = 'var(--green)';
+      lbl.textContent = 'Airtable connected ✓';
+      lbl.style.color = 'var(--green)';
+      const d = await r.json();
+      if (d.records?.length > 0) {
+        const sb = document.getElementById('btn-seed');
+        if (sb) sb.style.display='none';
+      }
+    } else {
+      dot.style.background='var(--red)'; lbl.textContent='Airtable error '+r.status;
+    }
+  } catch(e) {
+    dot.style.background='var(--red)'; lbl.textContent='Airtable unreachable';
+  }
+}
+
+
+// ════════════════════════════════════════════════════════
+// CORE NAV ──────────────────────────────────────────────
+// ════════════════════════════════════════════════════════
+const PAGE_LABELS = {
+  dashboard:'Dashboard', insights:'Insights', freelancers:'Freelancers',
+  tasks:'Tasks', deliverables:'Deliverables', kpis:'KPI Tracker',
+  revenue:'Revenue', audience:'Audience', reporting:'Reports'
+};
+
+function nav(page, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const t = document.getElementById('page-' + page);
+  if (t) t.classList.add('active');
+  if (el) el.classList.add('active');
+  else {
+    document.querySelectorAll('.nav-item').forEach(n => {
+      if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + page + "'")) n.classList.add('active');
+    });
+  }
+  syncMobileState(page);
+  window.scrollTo(0, 0);
+}
+
+// ── Mobile nav ────────────────────────────────────────────
+function navMobile(page, label) {
+  // activate page
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const t = document.getElementById('page-' + page);
+  if (t) t.classList.add('active');
+  // sync sidebar
+  document.querySelectorAll('.nav-item').forEach(n => {
+    n.classList.toggle('active', !!(n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + page + "'")));
+  });
+  syncMobileState(page);
+  closeDrawer();
+  window.scrollTo(0, 0);
+}
+
+function syncMobileState(page) {
+  // topbar label
+  const lbl = document.getElementById('mobile-page-label');
+  if (lbl) lbl.textContent = PAGE_LABELS[page] || page;
+  // drawer items
+  document.querySelectorAll('.drawer-item').forEach(i => {
+    i.classList.toggle('active', i.id === 'di-' + page);
+  });
+  // bottom nav
+  const mbnPages = ['dashboard','insights','revenue','kpis'];
+  document.querySelectorAll('.mbn-item').forEach(i => {
+    i.classList.toggle('active', i.id === 'mbn-' + page);
+  });
+}
+
+// ── Drawer ────────────────────────────────────────────────
+function toggleDrawer() {
+  const drawer = document.getElementById('drawer');
+  const overlay = document.getElementById('drawer-overlay');
+  const ham = document.getElementById('hamburger');
+  const isOpen = drawer.classList.contains('open');
+  drawer.classList.toggle('open', !isOpen);
+  overlay.classList.toggle('open', !isOpen);
+  ham.classList.toggle('open', !isOpen);
+  document.body.style.overflow = isOpen ? '' : 'hidden';
+}
+
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawer-overlay').classList.remove('open');
+  document.getElementById('hamburger').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// close drawer on ESC
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeDrawer(); } });
+
+// ── Tabs ──────────────────────────────────────────────────
+function setTab(el) {
+  const p = el.closest('.tabs');
+  if (!p) return;
+  p.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ── Modals ────────────────────────────────────────────────
+function openModal(n) { document.getElementById('modal-' + n).classList.add('open'); }
+function closeModal(n) { document.getElementById('modal-' + n).classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+// ── Reports ───────────────────────────────────────────────
+function toggleReport(h) {
+  const b = h.nextElementSibling;
+  const a = h.querySelector('span:last-child');
+  b.classList.toggle('open');
+  a.textContent = b.classList.contains('open') ? '▼ Expand' : '▶ Expand';
+  a.style.color = b.classList.contains('open') ? 'var(--green)' : 'var(--muted)';
+}
+
+// ── Period buttons ────────────────────────────────────────
+document.querySelectorAll('.period-btn').forEach(b => {
+  b.addEventListener('click', function() {
+    this.closest('.period-selector').querySelectorAll('.period-btn').forEach(x => x.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+
+
+// ── Progress bar animation + Airtable init ────────────────
+window.addEventListener('load', () => {
+  document.querySelectorAll('.progress-fill').forEach((bar, i) => {
+    const w = bar.style.width;
+    bar.style.width = '0';
+    setTimeout(() => { bar.style.width = w; }, 300 + i * 25);
+  });
+  syncMobileState('dashboard');
+  // Load live data from Airtable
+  checkConnection();
+  loadTasks();
+  loadReports();
+  loadKPIs();
+});
+
+// ── Swipe to open drawer (mobile) ────────────────────────
+let touchStartX = 0;
+document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, {passive:true});
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  if (touchStartX < 24 && dx > 60) toggleDrawer();     // swipe right from left edge
+  if (dx < -80 && document.getElementById('drawer').classList.contains('open')) closeDrawer(); // swipe left closes
+}, {passive:true});
+</script>
+</body>
+</html>
