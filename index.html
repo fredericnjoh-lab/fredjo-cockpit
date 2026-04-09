@@ -1498,7 +1498,12 @@ let tasksCache = [];
 
 async function loadTasks() {
   tasksCache = await atGet('tasks', 'sort%5B0%5D%5Bfield%5D=Priority&sort%5B0%5D%5Bdirection%5D=asc');
-  renderKanban(tasksCache);
+  if (tasksCache.length > 0) {
+    renderKanban(tasksCache);
+  } else {
+    // Fallback: render seed data when Airtable is unreachable
+    renderKanban(TASK_SEED.map(f => ({ fields: f })));
+  }
 }
 
 function renderKanban(records) {
@@ -1592,7 +1597,12 @@ let reportsCache = [];
 
 async function loadReports() {
   reportsCache = await atGet('reports', 'sort%5B0%5D%5Bfield%5D=Week&sort%5B0%5D%5Bdirection%5D=desc');
-  if (reportsCache.length > 0) renderReports(reportsCache);
+  if (reportsCache.length > 0) {
+    renderReports(reportsCache);
+  } else {
+    const c = document.getElementById('reports-list');
+    if (c) c.innerHTML = '<div style="padding:20px;color:var(--muted);font-size:12px;text-align:center;">No reports yet — connect Airtable or seed the database to populate.</div>';
+  }
 }
 
 function renderReports(records) {
@@ -1695,7 +1705,7 @@ async function submitDeliverable() {
 // ════════════════════════════════════════════════════════
 const KPI_SEED = [
   // Facebook
-  { Metric:'Monthly Revenue', Platform:'Facebook', Unit:'USD', Baseline:138, 'Current Value':369.51, 'Target Q1 2026':2000, Period:'Monthly', Status:'Off track', Owner:'Naeem', 'Data Source':'Meta Business Suite' },
+  { Metric:'Monthly Revenue', Platform:'Facebook', Unit:'USD', Baseline:138, 'Current Value':65.80, 'Target Q1 2026':2000, Period:'Monthly', Status:'Off track', Owner:'Naeem', 'Data Source':'Meta Business Suite' },
   { Metric:'Monthly Views',   Platform:'Facebook', Unit:'Views', Baseline:40000000, 'Current Value':24700000, 'Target Q1 2026':70000000, Period:'Monthly', Status:'At risk', Owner:'Naeem', 'Data Source':'Meta Business Suite' },
   { Metric:'Viral Reels',     Platform:'Facebook', Unit:'Count', Baseline:0, 'Current Value':1, 'Target Q1 2026':4, Period:'Monthly', Status:'At risk', Owner:'Naeem', 'Data Source':'Meta Business Suite' },
   { Metric:'New Followers',   Platform:'Facebook', Unit:'Followers', Baseline:550000, 'Current Value':555000, 'Target Q1 2026':800000, Period:'Monthly', Status:'At risk', Owner:'Naeem', 'Data Source':'Meta Business Suite' },
@@ -1713,8 +1723,38 @@ const KPI_SEED = [
 ];
 
 async function loadKPIs() {
-  const records = await atGet('kpis');
+  let records = await atGet('kpis');
+  if (!records.length) {
+    // Fallback: use seed data
+    records = KPI_SEED.map(f => ({ fields: f }));
+  }
+  renderKPICards(records);
   console.log('KPI Targets loaded:', records.length, 'records');
+}
+
+function renderKPICards(records) {
+  const container = document.getElementById('kpi-table-body');
+  if (!container) return;
+  container.innerHTML = '';
+  records.forEach(rec => {
+    const f = rec.fields;
+    const cur = f['Current Value'] || 0;
+    const tgt = f['Target Q1 2026'] || 0;
+    const pct = tgt > 0 ? Math.round((cur / tgt) * 100) : 0;
+    const color = pct >= 80 ? 'var(--green)' : pct >= 40 ? 'var(--amber)' : 'var(--red)';
+    const row = document.createElement('div');
+    row.className = 'kpi-row';
+    row.style.cssText = 'display:grid;grid-template-columns:1.5fr .8fr .8fr .8fr .8fr .6fr;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);font-size:11px;align-items:center;';
+    row.innerHTML = \`
+      <div style="font-weight:500;">\${f.Metric || ''}</div>
+      <div><span class="pp \${f.Platform==='Facebook'?'pp-fb':f.Platform==='YouTube'?'pp-yt':'pp-ig'}">\${f.Platform || ''}</span></div>
+      <div style="font-family:'DM Mono',monospace;">\${f.Unit==='USD'?'$':''}\${cur}\${f.Unit==='%'?'%':''}</div>
+      <div style="font-family:'DM Mono',monospace;">\${f.Unit==='USD'?'$':''}\${tgt}\${f.Unit==='%'?'%':''}</div>
+      <div style="height:6px;background:var(--panel-2);border-radius:3px;overflow:hidden;"><div style="height:100%;width:\${Math.min(pct,100)}%;background:\${color};border-radius:3px;"></div></div>
+      <div style="color:\${color};font-family:'DM Mono',monospace;font-weight:600;">\${pct}%</div>
+    \`;
+    container.appendChild(row);
+  });
 }
 
 // ════════════════════════════════════════════════════════
@@ -1903,6 +1943,7 @@ function showTokenInstructions() {
 async function checkConnection() {
   const dot = document.getElementById('at-status-dot');
   const lbl = document.getElementById('at-status-label');
+  if (!dot || !lbl) return;
   try {
     const r = await fetch(atUrl('tasks')+'?maxRecords=1', { headers: atHdr });
     if (r.ok) {
