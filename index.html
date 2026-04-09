@@ -1745,14 +1745,14 @@ function renderKPICards(records) {
     const row = document.createElement('div');
     row.className = 'kpi-row';
     row.style.cssText = 'display:grid;grid-template-columns:1.5fr .8fr .8fr .8fr .8fr .6fr;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);font-size:11px;align-items:center;';
-    row.innerHTML = \`
-      <div style="font-weight:500;">\${f.Metric || ''}</div>
-      <div><span class="pp \${f.Platform==='Facebook'?'pp-fb':f.Platform==='YouTube'?'pp-yt':'pp-ig'}">\${f.Platform || ''}</span></div>
-      <div style="font-family:'DM Mono',monospace;">\${f.Unit==='USD'?'$':''}\${cur}\${f.Unit==='%'?'%':''}</div>
-      <div style="font-family:'DM Mono',monospace;">\${f.Unit==='USD'?'$':''}\${tgt}\${f.Unit==='%'?'%':''}</div>
-      <div style="height:6px;background:var(--panel-2);border-radius:3px;overflow:hidden;"><div style="height:100%;width:\${Math.min(pct,100)}%;background:\${color};border-radius:3px;"></div></div>
-      <div style="color:\${color};font-family:'DM Mono',monospace;font-weight:600;">\${pct}%</div>
-    \`;
+    row.innerHTML = `
+      <div style="font-weight:500;">${f.Metric || ''}</div>
+      <div><span class="pp ${f.Platform==='Facebook'?'pp-fb':f.Platform==='YouTube'?'pp-yt':'pp-ig'}">${f.Platform || ''}</span></div>
+      <div style="font-family:'DM Mono',monospace;">${f.Unit==='USD'?'$':''}${cur}${f.Unit==='%'?'%':''}</div>
+      <div style="font-family:'DM Mono',monospace;">${f.Unit==='USD'?'$':''}${tgt}${f.Unit==='%'?'%':''}</div>
+      <div style="height:6px;background:var(--panel-2);border-radius:3px;overflow:hidden;"><div style="height:100%;width:${Math.min(pct,100)}%;background:${color};border-radius:3px;"></div></div>
+      <div style="color:${color};font-family:'DM Mono',monospace;font-weight:600;">${pct}%</div>
+    `;
     container.appendChild(row);
   });
 }
